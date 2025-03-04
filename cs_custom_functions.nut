@@ -3,6 +3,34 @@ const TEAM_UNASSIGNED = 0;  // "Select Team" screen.
 const TEAM_SPECTATOR = 1;
 const TEAM_TERRORIST = 2;
 const TEAM_COUNTER_TERRORIST = 3;
+enum CS_PLAYER_CLASS 
+{   // This is the order of the player class for m_iClass netprop.
+    NOCLASS,    // Spectator/Unassigned
+    // Terrorist
+    PHOENIX_CONNEXION,
+    ELITE_CREW,
+    ARCTIC_AVENGERS,
+    GUERILLA_WARFARE,
+    // Counter-Terrorist
+    SEAL_TEAM_6,
+    GSG_9,
+    SAS,
+    GIGN
+}
+enum CS_PLAYER_SKIN
+{
+    NOCLASS = "",    // Spectator/Unassigned
+    // Terrorist
+    PHOENIX_CONNEXION = "models/player/t_phoenix.mdl",
+    ELITE_CREW = "models/player/t_leet.mdl",
+    ARCTIC_AVENGERS = "models/player/t_arctic.mdl",
+    GUERILLA_WARFARE = "models/player/t_guerilla.mdl",
+    // Counter-Terrorist
+    SEAL_TEAM_6 = "models/player/ct_urban.mdl",
+    GSG_9 = "models/player/ct_gsg9.mdl",
+    SAS = "models/player/ct_sas.mdl",
+    GIGN = "models/player/ct_gign.mdl"
+}
 ::MaxPlayers <- MaxClients().tointeger(); // Extracted from: https://developer.valvesoftware.com/wiki/Source_SDK_Base_2013/Scripting/VScript_Examples#Iterating_Through_Players
 
 // PLAYER
@@ -15,10 +43,93 @@ const TEAM_COUNTER_TERRORIST = 3;
 {
     return NetProps.GetPropEntity(client, "m_hActiveWeapon");
 }
+
+::GetPlayerArmor <- function(client)
+{   // Returns the value of the armor (kevlar/kevlar+helmet).
+    return NetProps.GetPropInt(client, "m_ArmorValue");
+}
+
+::SetPlayerArmor <- function(client, value)
+{   // Returns the value of the armor (kevlar/kevlar+helmet).
+    return NetProps.SetPropInt(client, "m_ArmorValue", value);
+}
+
 // Is "cs_player_manager" EntIndexToHScript(MaxClients().tointeger()+6)?
 ::GetPlayerUserID <- function(client)
 {
     return NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iUserID", client.entindex());
+}
+
+::GetPlayerClass <- function(client)
+{   // Returns the integer class of the player (Choosing a Phoenix and a "Seal Team 6"). See PLAYER_CLASS
+    return NetProps.GetPropInt(client, "m_iClass");
+}
+
+::SetPlayerClass <- function(client, iClass, bShouldSetModel = false)   // If bShouldSetModel is true, the function will change the model as well.
+{   // Changes the class of a player. Note: You can't set any class outside the team the player belongs in (ex. PHOENIX to SAS).
+    local bHasChanged = false;
+    local team = client.GetTeam();
+    local models = [    // If valve dares to change the values...
+        "models/player/t_phoenix.mdl",    // Spectator/Unassigned. This slot will never be used anyway.
+        // Terrorist
+        "models/player/t_phoenix.mdl",
+        "models/player/t_leet.mdl",
+        "models/player/t_arctic.mdl",
+        "models/player/t_guerilla.mdl",
+        // Counter-Terrorist
+        "models/player/ct_urban.mdl",
+        "models/player/ct_gsg9.mdl",
+        "models/player/ct_sas.mdl",
+        "models/player/ct_gign.mdl"
+    ];
+    
+    if ((iClass > 0 && iClass < 9) && team > 1)
+    {
+        if (iClass <= 4 && team == 2)
+        {
+            NetProps.SetPropInt(client, "m_iClass", iClass);
+            bHasChanged = true;
+            print("TERROR")
+        }
+        else if (iClass >= 5 && team == 3)
+        {
+            NetProps.SetPropInt(client, "m_iClass", iClass);
+            bHasChanged = true;
+            print("CT")
+        }
+        if (bShouldSetModel && bHasChanged)
+        {   
+            // Matches easier behaviour of the SetModel input, automatically precaches, maintains sequence/cycle if possible. Also clears the bone cache.
+            client.SetModelSimple(models[iClass]);
+        } 
+    }
+    return;
+}
+
+::GetPlayerClassString <- function(client)
+{   // Same as above, but it will return the name of the class
+    local iClass = NetProps.GetPropInt(client, "m_iClass");
+    switch (iClass) 
+    {
+        case 1:
+            return "Phoenix Connexion";
+        case 2:
+            return "Elite Crew";
+        case 3:
+            return "Arctic Avengers";
+        case 4:
+            return "Guerilla Warfare";
+        case 5:
+            return "Seal Team 6";
+        case 6:
+            return "GSG-9";
+        case 7:
+            return "SAS";
+        case 8:
+            return "GIGN";
+        default:
+            return null;
+    }
 }
 
 ::GetPlayerScore <- function(client)
@@ -26,9 +137,22 @@ const TEAM_COUNTER_TERRORIST = 3;
     return NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iScore", client.entindex());
 } // You cannot set the amount tho... You can use game_score in that case.
 
-::SetPlayerScore <- function(client, score)
-{   // TODO: Make a way to give points to x players without creating and killing x game_scores in the same frame.
-
+::SetPlayerScore <- function(client, score, bConserveOldScore = false)
+{   // Set's the score of the player. Will this ran out of edicts?. if bConserveOldScore is true, it won't reset the score before applying the new score value.
+    local game_score = SpawnEntityFromTable("game_score", {spawnflags = 1});
+    local old_score = NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iScore", client.entindex());
+    if (!bConserveOldScore)
+    {
+        NetProps.SetPropInt(game_score, "m_Score", (-(old_score)));   // This will make sure the applied score is 0
+        EntFireByHandle(game_score, "ApplyScore", "", 0.0, client, null);
+        SetPlayerScore(client, score, true); // Yeah, weird but it works. That's what it matters btw.
+    }
+    else 
+    {
+        NetProps.SetPropInt(game_score, "m_Score", score);
+        EntFireByHandle(game_score, "ApplyScore", "", 0.0, client, null);
+    }  
+    EntFireByHandle(game_score, "Kill", "", 0.0, null, null);
 }
 
 ::GetPlayerDeathAmount <- function(client)
@@ -69,14 +193,15 @@ const TEAM_COUNTER_TERRORIST = 3;
    return NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iMVPs", client.entindex());
 }   // You cannot set the amount tho...
 
+::GetThrowGrenadeCount <- function(client)
+{   // Returns the "m_iThrowGrenadeCounter" netprop. It's kinda useless because it resets each 8 throws.
+    // The amount doesn't reset when changing to the spectator team unless the spectator joins again to any team.
+    return NetProps.GetPropInt(client, "m_iThrowGrenadeCounter");
+}
+
 ::GetButtonMask <- function(client)
 {
     return NetProps.GetPropInt(client, "m_nButtons");
-}
-
-::GetPlayerTeam <- function(client)
-{
-    return NetProps.GetPropInt(client, "m_iTeamNum");
 }
 
 ::GetMyWeapons <- function (client, bShouldPrint = false)
@@ -106,16 +231,16 @@ const TEAM_COUNTER_TERRORIST = 3;
 {   // Similar as l4d2's GetInvTable but this will return the table instead. You can also decide if print the table in the console.
     // "item_defuser" is removed when is picked up by a player but "m_bHasDefuser" is set to true.
     // Same for "item_ngvs", with "m_bHasNightVision" is set to true.
-    if (GetPlayerTeam(client) <= 1)
+    if (client.GetTeam() <= 1)
         return;
 
     local table = {};
     local m_hMyWeapons = GetMyWeapons(client);
     local primary = function()
     {
-        if (GetPlayerTeam(client) == 2) // The c4 takes the slot2
+        if (client.GetTeam() == 2) // The c4 takes the slot2
             return m_hMyWeapons[3];
-        else (GetPlayerTeam(client) == 3)
+        else (client.GetTeam() == 3)
             return m_hMyWeapons[2];
     }
 
@@ -124,22 +249,22 @@ const TEAM_COUNTER_TERRORIST = 3;
     local grenade = m_hMyWeapons[4];
     local flashbang = function()
     {
-        if (GetPlayerTeam(client) == 2) // It takes the slot 5
+        if (client.GetTeam() == 2) // It takes the slot 5
             return m_hMyWeapons[5];
-        else (GetPlayerTeam(client) == 3) // It takes the slot 3
+        else (client.GetTeam() == 3) // It takes the slot 3
             return m_hMyWeapons[3];
     }
 
     local smokegrenade = function()
     {
-        if (GetPlayerTeam(client) == 2) // It takes the slot 6
+        if (client.GetTeam() == 2) // It takes the slot 6
             return m_hMyWeapons[6];
-        else (GetPlayerTeam(client) == 3) // It takes the slot 5
+        else (client.GetTeam() == 3) // It takes the slot 5
             return m_hMyWeapons[5];
     }
     local c4_bomb = function()
     {
-        if (GetPlayerTeam(client) == 2) // It takes the slot 2 for TT
+        if (client.GetTeam() == 2) // It takes the slot 2 for TT
             return m_hMyWeapons[2];
 
         return null;
@@ -203,6 +328,16 @@ const TEAM_COUNTER_TERRORIST = 3;
         NetProps.SetPropInt(client, "m_iAccount", amount);
 }
 
+::ToggleDrawViewmodel <- function(client)
+{   // Client-side function: hide or show the view model. It resets every round. Some entities like "point_viewcontrol" messes with the netprop.
+    // It doesn't hide the muzzleflash.
+    local m_bDrawViewmodel = NetProps.GetPropBool(client, "m_Local.m_bDrawViewmodel");
+    if (m_bDrawViewmodel)
+        NetProps.SetPropBool(client, "m_Local.m_bDrawViewmodel", false);
+    else
+        NetProps.SetPropBool(client, "m_Local.m_bDrawViewmodel", true);
+}
+
 ::HasBombDefuser <- function(client)
 {   // Returns true if the player has picked up a bomb defuser
     // Wait, isn't this the same as NetProps.GetPropBoolArray(Entities.FindByClassname(null, "cs_player_manager"), "m_bHasDefuser", client.entindex())?¿
@@ -215,7 +350,7 @@ const TEAM_COUNTER_TERRORIST = 3;
     return NetProps.GetPropIntArray(client, "m_iAmmo", weapon.GetPrimaryAmmoType());
 }
 
-::SetPrimaryAmmo <- function(client, weapon, ammo)
+::SetPrimaryAmmo <- function(client, weapon, ammo)  // You can even set ammo for grenades. That's a nice incentive for flashbang waves.
 {   // Sets the primary ammo of a weapon. Only works for picked up weapons. Weird
     NetProps.SetPropIntArray(client, "m_iAmmo", ammo, weapon.GetPrimaryAmmoType());
 }
@@ -271,7 +406,7 @@ const TEAM_COUNTER_TERRORIST = 3;
         players.push(player);
 
         if (bShouldPrint)
-            printl(i + " | Name: " + GetPlayerName(player) + " | Team: " + GetPlayerTeam(player) + (IsPlayerABot(player) ? " | BOT": ""));
+            printl(i + " | Name: " + GetPlayerName(player) + " | Team: " + player.GetTeam() + (IsPlayerABot(player) ? " | BOT": ""));
     }
     return players;
 }

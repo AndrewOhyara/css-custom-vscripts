@@ -1,4 +1,7 @@
 // Custom methods based on l4d2 vscript.
+if (this != getroottable())
+    throw "This script must the included in the root scope, please.";
+
 const TEAM_UNASSIGNED = 0;  // "Select Team" screen.
 const TEAM_SPECTATOR = 1;
 const TEAM_TERRORIST = 2;
@@ -32,6 +35,7 @@ enum CS_PLAYER_SKIN
     GIGN = "models/player/ct_gign.mdl"
 }
 ::MaxPlayers <- MaxClients().tointeger(); // Extracted from: https://developer.valvesoftware.com/wiki/Source_SDK_Base_2013/Scripting/VScript_Examples#Iterating_Through_Players
+::GetListenServerHost <- @() PlayerInstanceFromIndex(1);
 
 // PLAYER
 ::GetPlayerName <- function(client)
@@ -137,9 +141,23 @@ enum CS_PLAYER_SKIN
     return NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iScore", client.entindex());
 } // You cannot set the amount tho... You can use game_score in that case.
 
+// ---------------------- GIVING SCORE TO PLAYERS --------------------- //
+// Removing the main entity per script load in case round is not restarted. (Testing)
+if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && CurrentMainGameScoreEnt.IsValid()))
+    CurrentMainGameScoreEnt.Kill();
+
+// We don't want to create a lot of entites to run out of edicts in the same frame;
+// Hopefully, we will only need one of these and the entity won't conflict to another game_score from the map (ZE maps).
+::CurrentMainGameScoreEnt <- null;
 ::SetPlayerScore <- function(client, score, bConserveOldScore = false)
-{   // Set's the score of the player. Will this ran out of edicts?. if bConserveOldScore is true, it won't reset the score before applying the new score value.
-    local game_score = SpawnEntityFromTable("game_score", {spawnflags = 1});
+{   // Set's the score of the player. if bConserveOldScore is true, it won't reset the score before applying the new score value.
+    local game_score = CurrentMainGameScoreEnt;
+    if (!game_score || game_score == null || !game_score.IsValid()) // Create a new game_score if our main entity doesn't exist yet.
+    {
+        game_score = SpawnEntityFromTable("game_score", {targetname = UniqueString("game_score") spawnflags = 1});
+        CurrentMainGameScoreEnt = game_score;
+    }
+
     local old_score = NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iScore", client.entindex());
     if (!bConserveOldScore)
     {
@@ -151,9 +169,9 @@ enum CS_PLAYER_SKIN
     {
         NetProps.SetPropInt(game_score, "m_Score", score);
         EntFireByHandle(game_score, "ApplyScore", "", 0.0, client, null);
-    }  
-    EntFireByHandle(game_score, "Kill", "", 0.0, null, null);
+    }
 }
+// ---------------------- GIVING SCORE TO PLAYERS --------------------- //
 
 ::GetPlayerDeathAmount <- function(client)
 {   // Returns the death amount of the player.
@@ -354,6 +372,15 @@ enum CS_PLAYER_SKIN
 {   // Sets the primary ammo of a weapon. Only works for picked up weapons. Weird
     NetProps.SetPropIntArray(client, "m_iAmmo", ammo, weapon.GetPrimaryAmmoType());
 }
+
+// READ: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions#CBaseCombatWeapon:~:text=by%20setting%20the-,m_bLagCompensation,-netprop%20%E2%86%93%20on
+::ShootPrimaryAttack <- function(client)
+{   // Shoots the primary attack of a weapon.
+    NetProps.SetPropBool(client, "m_bLagCompensation", false);
+    NetProps.GetPropEntity(client, "m_hActiveWeapon").PrimaryAttack();
+    NetProps.SetPropBool(client, "m_bLagCompensation", true);
+}
+
 
 // VECTORS AND QANGLES
 ::StringToQAngle <- function(str, delimiter)

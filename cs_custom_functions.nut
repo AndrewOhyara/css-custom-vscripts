@@ -161,9 +161,9 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
         old_score *= -1;
         CurrentMainGameScoreEnt.KeyValueFromInt("points", old_score);
         // Using EntFireByHandle() will do addition (ex. 10 will add 10 and -10 will substract 10 instead of substracting the current score).
-        // A reasonable explanation is this method isn't synchronous as the wiki states. It waits for the end of the current frame.
+        // A reasonable explanation is because this method isn't synchronous as the wiki states. It waits for the end of the current frame.
         // Basically we were calling those methods at the same time making the only "points" to apply from the penultimate line and never from the above line.
-        // Hopefully, "AcceptInput" is a thing. It's processed instantly. Respecting the lineal order.
+        // Hopefully, "AcceptInput" is a thing. It's processed instantly. Respecting the lineal order of this method.
         CurrentMainGameScoreEnt.AcceptInput("ApplyScore", "", client, null);
     }
     CurrentMainGameScoreEnt.KeyValueFromInt("points", score);

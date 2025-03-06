@@ -151,25 +151,19 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 ::CurrentMainGameScoreEnt <- null;
 ::SetPlayerScore <- function(client, score, bConserveOldScore = false)
 {   // Set's the score of the player. if bConserveOldScore is true, it won't reset the score before applying the new score value.
-    local game_score = CurrentMainGameScoreEnt;
-    if (!game_score || game_score == null || !game_score.IsValid()) // Create a new game_score if our main entity doesn't exist yet.
+    if (!CurrentMainGameScoreEnt || CurrentMainGameScoreEnt == null || !CurrentMainGameScoreEnt.IsValid()) // Create a new game_score if our main entity doesn't exist yet.
     {
-        game_score = SpawnEntityFromTable("game_score", {targetname = UniqueString("game_score") spawnflags = 1});
-        CurrentMainGameScoreEnt = game_score;
+        CurrentMainGameScoreEnt = SpawnEntityFromTable("game_score", {targetname = UniqueString("game_score") spawnflags = 1});
     }
-
     local old_score = NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iScore", client.entindex());
     if (!bConserveOldScore)
     {
-        NetProps.SetPropInt(game_score, "m_Score", (-(old_score)));   // This will make sure the applied score is 0
-        EntFireByHandle(game_score, "ApplyScore", "", 0.0, client, null);
-        SetPlayerScore(client, score, true); // Yeah, weird but it works. That's what it matters btw.
+        old_score *= -1;
+        CurrentMainGameScoreEnt.KeyValueFromInt("points", old_score);
+        CurrentMainGameScoreEnt.AcceptInput("ApplyScore", "", client, null);
     }
-    else 
-    {
-        NetProps.SetPropInt(game_score, "m_Score", score);
-        EntFireByHandle(game_score, "ApplyScore", "", 0.0, client, null);
-    }
+    CurrentMainGameScoreEnt.KeyValueFromInt("points", score);
+    CurrentMainGameScoreEnt.AcceptInput("ApplyScore", "", client, null);
 }
 // ---------------------- GIVING SCORE TO PLAYERS --------------------- //
 

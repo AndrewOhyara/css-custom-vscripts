@@ -37,6 +37,144 @@ enum CS_PLAYER_SKIN
 ::MaxPlayers <- MaxClients().tointeger(); // Extracted from: https://developer.valvesoftware.com/wiki/Source_SDK_Base_2013/Scripting/VScript_Examples#Iterating_Through_Players
 ::GetListenServerHost <- @() PlayerInstanceFromIndex(1);
 
+// ENTITIES
+// Syntax: DissolveEntity(<Instance or Int>, <Int type>, <Int magnitude>)
+// Check: https://developer.valvesoftware.com/wiki/Env_entity_dissolver
+::DissolveEntity <- function(any, type = 0, magnitude = 0)
+{   // Dissolves any physical entity. WARNING: Undesired effects on players if this used on them. (Use this method on their ragdolls instead)
+    {
+        local ent = any;
+        if (typeof any == "integer")
+        {
+           ent = EntIndexToHScript(any);
+        }
+        else if (typeof ent != "instance")
+        {
+           return;
+        }
+        local dissolver = Entities.CreateByClassname("env_entity_dissolver");
+        dissolver.KeyValueFromString("target", "!activator");
+        dissolver.KeyValueFromInt("dissolvetype", type);
+        dissolver.KeyValueFromInt("magnitude", type);
+  
+        Entities.DispatchSpawn(dissolver);
+  
+        dissolver.AcceptInput("Dissolve", "", ent, null);
+        dissolver.AcceptInput("Kill", "", null, null);
+    }
+}
+
+// NOTE: When using it with a player to another player, for some reason, the trace will point a little higher and poiting to spots like the head will return null.
+::GetPointedEntity <- function(any_ent, bIgnoreWorldSpawn = true, iMask = 33579137)
+{  // It basically returns the pointed entity of another entity. If bIgnoreWorldSpawn is true, it will return worldspawn if it's the entity that's being pointed. 
+   // Since entities are classes, we can know if it has the method "EyePosition" and "EyeAngles".
+   local eye_pos = null;
+   local bSupportEyes = true;
+   if ("EyePosition" in any_ent && "EyeAngles" in any_ent)
+   {  // Both of these methods must be present in the entity class.
+        eye_pos = any_ent.EyePosition();
+      //if (any_ent.GetClassname() == "player")   // For some reason, you must point a little down to get a player entity.
+         //eye_pos += Vector(0, 0, -8);   // Thought, this doesn't happen with another entity.
+   }
+   else
+   {
+        eye_pos =   any_ent.GetOrigin();
+        bSupportEyes = false;
+   }
+
+   // We are additioning the pos with the foward vector of the eyes that's multiplied by 99999.
+   // Meaning the destination vector (ex. (-71104.046875, -984113.750000, -150380.21875)) will be far enough to catch anything.
+   // You can also use the Scale() method. 
+   local dest_pos = null;
+   if (bSupportEyes)
+   {
+        dest_pos = eye_pos + any_ent.EyeAngles().Forward().Scale(999999);
+   }
+   else 
+   {
+        dest_pos = eye_pos + any_ent.GetAbsAngles().Forward().Scale(999999);
+   }
+
+   // Then, trace a line.
+   local trace_table = 
+   {
+        start = eye_pos
+        end = dest_pos
+        mask = iMask   // Default mask is MASK_VISIBLE_AND_NPCS (33579137)
+        ignore = any_ent  // ofc, we don't want to include the entity itself
+   }
+   TraceLineEx(trace_table);
+
+    if (!trace_table.hit)
+        return null;
+
+    if (!trace_table.enthit || trace_table.enthit == null || !trace_table.enthit.IsValid())   // Your typical NULL pointer situation.
+        return null;
+
+    if (trace_table.enthit == any_ent)  // If the enthit is the entity itself.
+        return null;
+
+    if (bIgnoreWorldSpawn && trace_table.enthit.GetClassname() == "worldspawn")
+        return null;
+
+    return trace_table.enthit;
+}
+
+::GetPointedPosition <- function(any_ent, bIgnoreWorldSpawn = false, iMask = 1174421507)
+{  // It basically returns the vector where the trace ended.
+   // Since entities are classes, we can know if it has the method "EyePosition" and "EyeAngles".
+   local eye_pos = null;
+   local bSupportEyes = true;
+   if ("EyePosition" in any_ent && "EyeAngles" in any_ent)
+   {  // Both of these methods must be present in the entity class.
+        eye_pos = any_ent.EyePosition();
+      //if (any_ent.GetClassname() == "player")   // For some reason, you must point a little down to get a player entity.
+         //eye_pos += Vector(0, 0, -8);   // Thought, this doesn't happen with another entity.
+   }
+   else
+   {
+        eye_pos =   any_ent.GetOrigin();
+        bSupportEyes = false;
+   }
+
+   // We are additioning the pos with the foward vector of the eyes that's multiplied by 99999.
+   // Meaning the destination vector (ex. (-71104.046875, -984113.750000, -150380.21875)) will be far enough to catch anything.
+   // You can also use the Scale() method. 
+   local dest_pos = null;
+   if (bSupportEyes)
+   {
+        dest_pos = eye_pos + any_ent.EyeAngles().Forward().Scale(999999);
+   }
+   else 
+   {
+        dest_pos = eye_pos + any_ent.GetAbsAngles().Forward().Scale(999999);
+   }
+
+   // Then, trace a line.
+   local trace_table = 
+   {
+        start = eye_pos
+        end = dest_pos
+        mask = iMask   // Default mask is MASK_VISIBLE_AND_NPCS (33579137)
+        ignore = any_ent  // ofc, we don't want to include the entity itself
+   }
+   TraceLineEx(trace_table);
+
+    if (!trace_table.hit)
+        return null;
+
+    if (!trace_table.enthit || trace_table.enthit == null || !trace_table.enthit.IsValid())   // Your typical NULL pointer situation.
+        return null;
+
+    if (trace_table.enthit == any_ent)  // If the enthit is the entity itself.
+        return null;
+
+    if (bIgnoreWorldSpawn && trace_table.enthit.GetClassname() == "worldspawn")
+        return null;
+
+    return trace_table.pos;
+}
+
 // PLAYER
 ::GetPlayerName <- function(client)
 {
@@ -221,7 +359,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 }
 
 ::GetMyWeapons <- function (client, bShouldPrint = false)
-{   // Basically returns the netprop array "m_hMyWeapons" from a player. [REMOVED] If 'bShouldSkipNull' is true, it will not include the null slots of the array.
+{   // Basically returns the netprop array "m_hMyWeapons" from a player.
     local m_hMyWeapons = [];
     local array_size = NetProps.GetPropArraySize(client, "m_hMyWeapons");   // Just in case.
     
@@ -407,7 +545,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 
 // UTILS
 ::Ent <- function( idxorname )
-{   // "Takes an entity index or name, returns the entity" - Ported from scriptedmode.nuc
+{   // "Takes an entity index or name, returns the entity" - Ported from l4d2 scriptedmode.nuc
 	local hEnt = null
 	if ( typeof(idxorname) == "string" )
 		hEnt = Entities.FindByName( null, idxorname );

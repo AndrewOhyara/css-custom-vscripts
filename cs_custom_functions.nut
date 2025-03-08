@@ -39,7 +39,6 @@ enum CS_PLAYER_SKIN
 
 // ENTITIES
 // Syntax: DissolveEntity(<Instance or Int>, <Int type>, <Int magnitude>)
-// Check: https://developer.valvesoftware.com/wiki/Env_entity_dissolver
 ::DissolveEntity <- function(any, type = 0, magnitude = 0)
 {   // Dissolves any physical entity. WARNING: Undesired effects on players if this used on them. (Use this method on their ragdolls instead)
     {
@@ -65,7 +64,7 @@ enum CS_PLAYER_SKIN
 }
 
 // NOTE: When using it with a player to another player, for some reason, the trace will point a little higher and poiting to spots like the head will return null.
-::GetPointedEntity <- function(any_ent, bIgnoreWorldSpawn = true, iMask = 33579137)
+::GetEntityPointingAt <- function(any_ent, bIgnoreWorldSpawn = true, iMask = 33579137)
 {  // It basically returns the pointed entity of another entity. If bIgnoreWorldSpawn is true, it will return worldspawn if it's the entity that's being pointed. 
    // Since entities are classes, we can know if it has the method "EyePosition" and "EyeAngles".
    local eye_pos = null;
@@ -120,7 +119,7 @@ enum CS_PLAYER_SKIN
     return trace_table.enthit;
 }
 
-::GetPointedPosition <- function(any_ent, bIgnoreWorldSpawn = false, iMask = 1174421507)
+::GetPointingPosition <- function(any_ent, bIgnoreWorldSpawn = false, iMask = 1174421507)
 {  // It basically returns the vector where the trace ended.
    // Since entities are classes, we can know if it has the method "EyePosition" and "EyeAngles".
    local eye_pos = null;
@@ -174,6 +173,15 @@ enum CS_PLAYER_SKIN
 
     return trace_table.pos;
 }
+
+::IsOnGround <- function(any_ent)
+{
+    if (any_ent.GetFlags() & 1) // FL_ONGROUND
+        return true;
+
+    return false;
+}
+
 
 // PLAYER
 ::GetPlayerName <- function(client)

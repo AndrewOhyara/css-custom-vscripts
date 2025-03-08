@@ -1,4 +1,5 @@
 // Original source: https://developer.valvesoftware.com/wiki/Counter-Strike:_Source/Scripting/VScript_Examples#L4D2-like_muzzleflashes)
+// Requires the effects/muzzleflash_light texture from L4D2, or just use a plain white one and recolor it.
 if ("MuzzleflashEvents" in this) 
     MuzzleflashEvents.clear();
 

@@ -8,3 +8,5 @@ IncludeScript("name_of_the_file");
 // Including it in a specific scope
 IncludeScript("name_of_the_file", your_scope)
 ```
+## NOTE
+Most of these files are independent and don't require anything. Not even cs_custom_functions.nut

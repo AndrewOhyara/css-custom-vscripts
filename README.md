@@ -6,7 +6,7 @@ To run any of those files, you can use script_execute <name_of_the_file> (Requir
 // This will include your script in the root scope
 IncludeScript("name_of_the_file");
 
-// Including it in a specific scope (ex. a table or an entity)
+// Including it in a specific scope (ex. a table or an entity scope)
 IncludeScript("name_of_the_file", your_scope)
 ```
 ## NOTE

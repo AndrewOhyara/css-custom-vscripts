@@ -17,7 +17,7 @@ if ("NoFallDamage" in this)
         local max_damage = params["max_damage"];
         local ammo_type = params["ammo_type"];  // -1 if knife.
 
-        // Removing fall damage for players
+        // Removing fall damage for all players
         // See damage flags here: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions/Constants#FDmgType
         if (victim.IsPlayer() && damage_type == 32) // DMG_FALL flag
         {

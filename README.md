@@ -4,9 +4,9 @@ To run any of those files, you can use script_execute <name_of_the_file> (Requir
 ## Your "mapspawn.nut" file:
 ```Squirrel
 // This will include your script in the root scope
-IncludeScript("name_of_the_file");
+IncludeScript("name_of_the_file", getroottable());
 
-// Including it in a specific scope
+// Including it in a specific scope (ex. a table or an entity)
 IncludeScript("name_of_the_file", your_scope)
 ```
 ## NOTE

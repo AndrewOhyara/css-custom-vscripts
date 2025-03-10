@@ -2,10 +2,15 @@
 if (this != getroottable())
     throw "This script must the included in the root scope, please.";
 
+Msg("\n[CSS: Custom Functions] Loading script...\n");
+
+// TEAM
 const TEAM_UNASSIGNED = 0;  // "Select Team" screen.
 const TEAM_SPECTATOR = 1;
 const TEAM_TERRORIST = 2;
 const TEAM_COUNTER_TERRORIST = 3;
+
+// PLAYER CLASS
 enum CS_PLAYER_CLASS 
 {   // This is the order of the player class for m_iClass netprop.
     NOCLASS,    // Spectator/Unassigned
@@ -34,33 +39,70 @@ enum CS_PLAYER_SKIN
     SAS = "models/player/ct_sas.mdl",
     GIGN = "models/player/ct_gign.mdl"
 }
+
+// DAMAGE TYPE
+const DMG_GENERIC = 0;
+const DMG_CRUSH = 1;
+const DMG_BULLET = 2;
+const DMG_SLASH = 4;
+const DMG_BURN = 8;
+const DMG_VEHICLE = 16;
+const DMG_FALL = 32;
+const DMG_BLAST = 64;
+const DMG_CLUB = 128;
+const DMG_SHOCK = 256;
+const DMG_SONIC = 512;
+const DMG_ENERGYBEAM = 1024;
+const DMG_PREVENT_PHYSICS_FORCE = 2048;
+const DMG_NEVERGIB = 4096;
+const DMG_ALWAYSGIB = 8192;
+const DMG_DROWN = 16384;
+const DMG_PARALYZE = 32768;
+const DMG_NERVEGAS = 65536;
+const DMG_POISON = 131072;
+const DMG_RADIATION = 262144;
+const DMG_DROWNRECOVER = 524288;
+const DMG_ACID = 1048576;
+const DMG_SLOWBURN = 2097152;
+const DMG_REMOVENORAGDOLL = 4194304;
+const DMG_PHYSGUN = 8388608;
+const DMG_PLASMA = 16777216;
+const DMG_AIRBOAT = 33554432;
+const DMG_DISSOLVE = 67108864;
+const DMG_BLAST_SURFACE = 134217728;
+const DMG_DIRECT = 268435456;
+const DMG_BUCKSHOT = 536870912;
+const DMG_HEADSHOT = 1073741824;
+const DMG_LASTGENERICFLAG = -2147483648;
+
 ::MaxPlayers <- MaxClients().tointeger(); // Extracted from: https://developer.valvesoftware.com/wiki/Source_SDK_Base_2013/Scripting/VScript_Examples#Iterating_Through_Players
 ::GetListenServerHost <- @() PlayerInstanceFromIndex(1);
 
 // ENTITIES
-// Syntax: DissolveEntity(<Instance or Int>, <Int type>, <Int magnitude>)
+// Syntax: DissolveEntity(<Handle entity or Int entindex>, <Int type>, <Int magnitude>)
 ::DissolveEntity <- function(any, type = 0, magnitude = 0)
 {   // Dissolves any physical entity. WARNING: Undesired effects on players if this used on them. (Use this method on their ragdolls instead)
+    local ent = any;
+    if (typeof any == "integer")
     {
-        local ent = any;
-        if (typeof any == "integer")
-        {
-           ent = EntIndexToHScript(any);
-        }
-        else if (typeof ent != "instance")
-        {
-           return;
-        }
-        local dissolver = Entities.CreateByClassname("env_entity_dissolver");
-        dissolver.KeyValueFromString("target", "!activator");
-        dissolver.KeyValueFromInt("dissolvetype", type);
-        dissolver.KeyValueFromInt("magnitude", type);
-  
-        Entities.DispatchSpawn(dissolver);
-  
-        dissolver.AcceptInput("Dissolve", "", ent, null);
-        dissolver.AcceptInput("Kill", "", null, null);
+        ent = EntIndexToHScript(any);
     }
+    else if (typeof ent != "instance")
+    {
+        return;
+    }
+    if (ent == Entities.First())
+        return;
+
+    local dissolver = Entities.CreateByClassname("env_entity_dissolver");
+    dissolver.KeyValueFromString("target", "!activator");
+    dissolver.KeyValueFromInt("dissolvetype", type);
+    dissolver.KeyValueFromInt("magnitude", type);
+  
+    Entities.DispatchSpawn(dissolver);
+  
+    dissolver.AcceptInput("Dissolve", "", ent, null);
+    dissolver.AcceptInput("Kill", "", null, null);
 }
 
 // NOTE: When using it with a player to another player, for some reason, the trace will point a little higher and poiting to spots like the head will return null.
@@ -194,6 +236,21 @@ enum CS_PLAYER_SKIN
     return NetProps.GetPropEntity(client, "m_hActiveWeapon");
 }
 
+::GetLastWeapon <- function(client)
+{
+    return NetProps.GetPropEntity(client, "m_hLastWeapon");
+}
+
+::GetShotsFired <- function(client)
+{   // Returns the shots fired of the player. The counter resets if the player stops shooting. (It doesn't include grenades).
+    return NetProps.GetPropInt(client, "cslocaldata.m_iShotsFired");
+}
+
+::GetRagdoll <- function(client)
+{   // Returns the handle of the ragdoll that belongs to the client.
+    return NetProps.GetPropEntity(client, "m_hRagdoll");
+}
+
 ::GetPlayerArmor <- function(client)
 {   // Returns the value of the armor (kevlar/kevlar+helmet).
     return NetProps.GetPropInt(client, "m_ArmorValue");
@@ -202,6 +259,11 @@ enum CS_PLAYER_SKIN
 ::SetPlayerArmor <- function(client, value)
 {   // Returns the value of the armor (kevlar/kevlar+helmet).
     return NetProps.SetPropInt(client, "m_ArmorValue", value);
+}
+
+::GetLastPlaceName <- function(client)
+{   // [ONLY OFFICIAL MAPS] Returns the last place of a player (ex. "BombsiteA")
+    return NetProps.GetPropString(client, "m_szLastPlaceName");
 }
 
 // Is "cs_player_manager" EntIndexToHScript(MaxClients().tointeger()+6)?
@@ -362,7 +424,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 }
 
 ::GetButtonMask <- function(client)
-{
+{   // L4D2's vscript function. Returns the buttons that are being pressed by the player.
     return NetProps.GetPropInt(client, "m_nButtons");
 }
 
@@ -389,7 +451,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
     return m_hMyWeapons;
 }
 
-::GetInvTable <- function(client, bShouldPrint = false) // Don't use this for another game than vanilla css.
+::GetInvTable <- function(client, bShouldPrint = false) // Don't use this for another game than vanilla css. Requires GetMyWeapons method
 {   // Similar as l4d2's GetInvTable but this will return the table instead. You can also decide if print the table in the console.
     // "item_defuser" is removed when is picked up by a player but "m_bHasDefuser" is set to true.
     // Same for "item_ngvs", with "m_bHasNightVision" is set to true.
@@ -485,7 +547,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 
 ::SetPlayerMoney <- function(client, amount)
 {   // Sets the in-game money amount of the player. The maximun amount is 65535. No Patrick, you won't become rich from this.
-    // Any value over this, will give you the rest of the money starting from 0 (ex. 65545 will set the m_iAccount to 9).
+    // Any value beyond it, will give you the rest of the money starting from 0 (ex. 65545 will set the m_iAccount to 9).
     if (amount <= 65535)    
         NetProps.SetPropInt(client, "m_iAccount", amount);
 }
@@ -495,26 +557,93 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
     // It doesn't hide the muzzleflash.
     local m_bDrawViewmodel = NetProps.GetPropBool(client, "m_Local.m_bDrawViewmodel");
     if (m_bDrawViewmodel)
-        NetProps.SetPropBool(client, "m_Local.m_bDrawViewmodel", false);
+        NetProps.SetPropBool(client, "localdata.m_Local.m_bDrawViewmodel", false);
     else
-        NetProps.SetPropBool(client, "m_Local.m_bDrawViewmodel", true);
+        NetProps.SetPropBool(client, "localdata.m_Local.m_bDrawViewmodel", true);
 }
 
 ::HasBombDefuser <- function(client)
-{   // Returns true if the player has picked up a bomb defuser
+{   // Returns true if the player has picked up a bomb defuser.
     // Wait, isn't this the same as NetProps.GetPropBoolArray(Entities.FindByClassname(null, "cs_player_manager"), "m_bHasDefuser", client.entindex())?¿
     return NetProps.GetPropBool(client, "m_bHasDefuser");
 }
 
+::HasHelmet <- function(client)
+{   // Returns true if the player has helmet.
+    return NetProps.GetPropBool(client, "m_bHasHelmet");
+}
+
+::HasNightvision <- function(client)
+{   // Returns true if the player has nightvision.
+    return NetProps.GetPropBool(client, "m_bHasNightVision");
+}
+
+::GetDominationList <- function(client, type = 0, bShouldPrint = false)
+{   // Returns the array of "m_bPlayerDominated" (type = 0) and "m_bPlayerDominatingMe" (type = 1).
+    local DominationList = [];
+    local srtPropertyName = "m_bPlayerDominated";
+    if (type == 1)
+        srtPropertyName = "m_bPlayerDominatingMe";
+
+    if (bShouldPrint)        
+        printl("=========== " + srtPropertyName + " for: " + GetPlayerName(client) + " ===========");    
+    for (local i = 0; i < 66; i++)
+    {
+        local bool = NetProps.GetPropBoolArray(client, srtPropertyName, i);
+        DominationList.push(bool);
+
+        if (bShouldPrint)
+        {
+            local player = PlayerInstanceFromIndex(i);
+            printl("\tClientIndex [" + i + "] " + (player != null ? GetPlayerName(player) : "NULL") + " = " + bool);
+        }
+    }
+    if (bShouldPrint)
+        printl("=====================================================");
+
+    return DominationList;
+}
+
+::IsDominatingMe <- function(client, who)
+{   // Returns true if "who" is dominating the client.
+    return NetProps.GetPropBoolArray(client, "cslocaldata.m_bPlayerDominatingMe", who.entindex());
+}
+
+::IsDominated <- function(client, who)
+{   // Returns true if "who" is dominated by the client.
+    return NetProps.GetPropBoolArray(client, "cslocaldata.m_bPlayerDominated", who.entindex());
+}
+
+// NOTE: This only works with bomb carriers. You may want to use GetBombPlayer() first. Otherwise, it will always return false.
+::IsBombPlayerInBombsite <- function(client)  
+{   // Returns true if the player is in the bomb trigger area.
+    return NetProps.GetPropBool(client, "m_bInBombZone");
+}
+
+::IsDefusingBomb <- function(client)
+{   // Returns true if the player is defusing the bomb.
+    return NetProps.GetPropBool(client, "m_bIsDefusing");
+}
+
+::IsInBuyZone <- function(client)
+{   // Returns true if the player is in their team buy zone area.
+    return NetProps.GetPropBool(client, "m_bInBuyZone");
+}
+
+::IsNightvisionOn <- function(client)
+{   // Returns true if the player has the nightvision on.
+    return NetProps.GetPropBool(client, "m_bNightVisionOn");
+}
+
 // WEAPONS
 ::GetPrimaryAmmo <- function(client, weapon)
-{   // Returns the primary ammo of a weapon. Only works for picked up weapons. Weird
-    return NetProps.GetPropIntArray(client, "m_iAmmo", weapon.GetPrimaryAmmoType());
+{   // Returns the primary ammo of a weapon. Only works for weapons with a player as the owner. Weird
+    return NetProps.GetPropIntArray(client, "localdata.m_iAmmo", weapon.GetPrimaryAmmoType());
 }
 
 ::SetPrimaryAmmo <- function(client, weapon, ammo)  // You can even set ammo for grenades. That's a nice incentive for flashbang waves.
-{   // Sets the primary ammo of a weapon. Only works for picked up weapons. Weird
-    NetProps.SetPropIntArray(client, "m_iAmmo", ammo, weapon.GetPrimaryAmmoType());
+{   // Sets the primary ammo of a weapon. Only works for weapons with a player as the owner. Weird
+    NetProps.SetPropIntArray(client, "localdata.m_iAmmo", ammo, weapon.GetPrimaryAmmoType());
 }
 
 // READ: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions#CBaseCombatWeapon:~:text=by%20setting%20the-,m_bLagCompensation,-netprop%20%E2%86%93%20on
@@ -551,6 +680,45 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
     return vec;
 }
 
+/*
+    Syntax:
+    GetVectorDistance(<Vector input>, <Vector reference>)
+    startVector: The vector you want to start the distance.
+    endVector: The vector you want to end the distance.
+*/
+::GetVectorDistance <- function(startVector, endVector)
+{   // Returns the vector distance from a start to an end point. You may want to use Length() for a single unit distance.
+    return endVector - startVector;
+}
+
+/*
+    Syntax:
+    ReflectFromVector(<Vector input>, <Vector reference>, <array AxisToExclude>)
+    input: The vector you want to reflect.
+    reference: The vector you want the <input> to reflect from.
+    AxisToExclude: The axis of the <input> you want to exclude from being reflected.
+*/
+::ReflectFromVector <- function(input, reference, AxisToExclude = ["z"])
+{   // Basically, returns the x, y, z prime values of input from a reference. "AxisToExclude" is an array to exclude axis to be reflected
+    local vDistance = reference - input;
+    local vPrime = reference + vDistance; // Prime vector are reflected values.
+    // We want to filter whatever the user puts in the AxisToEclude param. Meaning, the only valid values are the vector axis 
+    // Ex: ["x"], ["x", "y"], ["y"], ["z"].
+    // Either way, you wouldn't want to use this for the 3 axis or it will just return the input vector.
+    local PrimeTable = {x = vPrime.x y = vPrime.y z = vPrime.z};  
+
+    for (local i = 0; i < AxisToEclude.len(); i++) 
+    {
+        local axis = AxisToEclude[i];
+        // This is the part we are going to filter the valid axis.
+        if (!(axis in PrimeTable))
+            continue;
+
+        vPrime[axis] = AxisToEclude[axis];
+    }
+    return vPrime;
+}
+
 // UTILS
 ::Ent <- function( idxorname )
 {   // "Takes an entity index or name, returns the entity" - Ported from l4d2 scriptedmode.nuc
@@ -562,7 +730,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 	if (hEnt)
 		return hEnt;
 
-	printl( "Hey! no entity for " + idxorname );
+	//printl( "Hey! no entity for " + idxorname );
 }
 
 ::GetPlayers <- function(bShouldPrint = false)
@@ -583,7 +751,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 }
 
 ::GetBombPlayer <- function()
-{   // Returns the index of the player that has picked up the bomb. There must be only one c4 per map.
+{   // Returns the index of the player that is carrying the bomb. There must be only one c4 per map.
     return NetProps.GetPropInt(Entities.FindByClassname(null, "cs_player_manager"), "m_iPlayerC4");
 }
 
@@ -608,7 +776,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 // MISC
 ::IsCheatingSession <- function()
 {
-    return (developer() > 0 || Convars.GetBool("sv_cheats") == "1") ? true : false;
+    return (developer() > 0 || Convars.GetBool("sv_cheats")) ? true : false;
 }
 
 ::IsAutoBunnyhopEnabled <- function()

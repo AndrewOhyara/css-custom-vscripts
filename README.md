@@ -3,8 +3,8 @@
 To run any of those files, you can use script_execute <name_of_the_file> (Requires sv_cheats 1) OR include them in your mapspawn.nut to run them automatically per map load as:
 ## Your "mapspawn.nut" file:
 ```Squirrel
-// This will include your script in the root scope
-IncludeScript("name_of_the_file");
+// This will include your script in the root scope. It's the scope "mapspawn.nut" runs.
+IncludeScript("name_of_the_file", getrootable());
 
 // Including it in a specific scope (ex. a table or an entity scope)
 IncludeScript("name_of_the_file", your_scope)

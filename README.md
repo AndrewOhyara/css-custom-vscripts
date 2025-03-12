@@ -10,4 +10,5 @@ IncludeScript("name_of_the_file", getrootable());
 IncludeScript("name_of_the_file", your_scope)
 ```
 ## NOTE
-Most of these files are independent and don't require anything. Not even cs_custom_functions.nut
+- Most of these files are independent and don't require anything. Not even "cs_custom_functions.nut".
+- You may need notepad++ to open ".nut" files.

@@ -14,7 +14,7 @@ if ("GiftGrabAchievement" in this)
         NetProps.SetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bWinterHolidayActive", bool);
     }
 
-    OnGameEvent_round_start = function(params)
+    OnGameEvent_round_freeze_end = function(params)
     {
         if (!GiftGrabAchievement.IsGiftGrabEventActive())
         {

@@ -1,4 +1,7 @@
 // Include this on your "mapspawn.nut" file before blaming.
+if ("GiftGrabAchievement" in this)
+    GiftGrabAchievement.clear();
+
 ::GiftGrabAchievement <- 
 {
     IsGiftGrabEventActive = function()

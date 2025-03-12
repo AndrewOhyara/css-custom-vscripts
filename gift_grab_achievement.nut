@@ -1,3 +1,4 @@
+// Include this on your "mapspawn.nut" file before blaming.
 ::GiftGrabAchievement <- 
 {
     IsGiftGrabEventActive = function()
@@ -23,4 +24,4 @@
             ClientPrint(null, 3, "\x05" + "THE GIFT GRAB EVENT IS ACTIVE");
     }
 }
-__CollectGameEventCallbacks(GiftGrabAchievement)
+__CollectGameEventCallbacks(GiftGrabAchievement);

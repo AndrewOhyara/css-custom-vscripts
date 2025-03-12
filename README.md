@@ -8,6 +8,10 @@ IncludeScript("name_of_the_file", getrootable());
 
 // Including it in a specific scope (ex. a table or an entity scope)
 IncludeScript("name_of_the_file", your_scope)
+
+// EXAMPLE
+// Include "gift_grab_achievement.nut" in the root scope.
+IncludeScript("gift_grab_achievement", getroottable());
 ```
 ## NOTE
 - Most of these files are independent and don't require anything. Not even "cs_custom_functions.nut".

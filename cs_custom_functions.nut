@@ -2,7 +2,7 @@
 if (this != getroottable())
     throw "This script must the included in the root scope, please.";
 
-Msg("\n[CSS: Custom Functions] Loading script...\n");
+Msg("\n[CSS Custom Functions] Loading script...\n");
 
 // TEAM
 const TEAM_UNASSIGNED = 0;  // "Select Team" screen.
@@ -40,6 +40,34 @@ enum CS_PLAYER_SKIN
     GIGN = "models/player/ct_gign.mdl"
 }
 
+// CBasePlayer BUTTONS
+const IN_ATTACK = 1;
+const IN_JUMP = 2;
+const IN_DUCK = 4;
+const IN_FORWARD = 8;
+const IN_BACK = 16;
+const IN_USE = 32;
+const IN_CANCEL = 64;   // What's this?
+const IN_LEFT = 128;
+const IN_RIGHT = 256;
+const IN_MOVELEFT = 512;
+const IN_MOVERIGHT = 1024;
+const IN_ATTACK2 = 2048;
+const IN_RUN = 4096;
+const IN_RELOAD = 8192;
+const IN_ALT1 = 16384;
+const IN_ALT2 = 32768;
+const IN_SCORE = 65536; // Same for +showscores
+const IN_SPEED = 131072;    // It's the walk action.
+const IN_WALK = 262144; // It's not walk action in-game. it's IN_SPEED instead!
+const IN_ZOOM = 524288;
+const IN_WEAPON1 = 1048576; // What's this?
+const IN_WEAPON2 = 2097152; // What's this?
+const IN_BULLRUSH = 4194304;
+const IN_GRENADE1 = 8388608;
+const IN_GRENADE2 = 16777216;
+const IN_ATTACK3 = 33554432;
+
 // DAMAGE TYPE
 const DMG_GENERIC = 0;
 const DMG_CRUSH = 1;
@@ -74,6 +102,41 @@ const DMG_DIRECT = 268435456;
 const DMG_BUCKSHOT = 536870912;
 const DMG_HEADSHOT = 1073741824;
 const DMG_LASTGENERICFLAG = -2147483648;
+
+// ENTITY FLAGS
+const FL_ONGROUND =	1;
+const FL_DUCKING = 2;
+const FL_ANIMDUCKING = 4;
+const FL_WATERJUMP = 8;
+const PLAYER_FLAG_BITS = 11;
+const FL_ONTRAIN = 16;
+const FL_INRAIN = 32;
+const FL_FROZEN	= 64;
+const FL_ATCONTROLS	= 128;
+const FL_CLIENT	= 256;
+const FL_FAKECLIENT	= 512;
+const FL_INWATER = 1024;
+const FL_FLY = 2048;
+const FL_SWIM = 4096;
+const FL_CONVEYOR = 8192;
+const FL_NPC = 16384;
+const FL_GODMODE = 32768;
+const FL_NOTARGET = 65536;
+const FL_AIMTARGET = 131072;
+const FL_PARTIALGROUND = 262144;
+const FL_STATICPROP = 524288;
+const FL_GRAPHED = 1048576;
+const FL_GRENADE = 2097152;
+const FL_STEPMOVEMENT = 4194304;
+const FL_DONTTOUCH = 8388608;
+const FL_BASEVELOCITY = 16777216;
+const FL_WORLDBRUSH = 33554432;
+const FL_OBJECT = 67108864;
+const FL_KILLME = 134217728;
+const FL_ONFIRE = 268435456;
+const FL_DISSOLVING = 536870912;
+const FL_TRANSRAGDOLL = 1073741824;
+const FL_UNBLOCKABLE_BY_PLAYER = 2147483648;
 
 ::MaxPlayers <- MaxClients().tointeger(); // Extracted from: https://developer.valvesoftware.com/wiki/Source_SDK_Base_2013/Scripting/VScript_Examples#Iterating_Through_Players
 ::GetListenServerHost <- @() PlayerInstanceFromIndex(1);
@@ -793,3 +856,44 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 {
     return Convars.GetBool("mp_flashlight");
 }
+
+::IsRoundFreezeEnded <- function()
+{   // Returns true if the round freeze period ends. You can do the same by hooking the event "round_freeze_end"
+    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bFreezePeriod");
+}
+
+::IsGiftGrabEventActive <- function()
+{   // Returns true if the gift grab event is active.
+    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bWinterHolidayActive");
+}
+
+::SetForceGiftGrabEvent <- function(bool)
+{   // Forces or disables the Gift Grab event.
+    NetProps.SetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bWinterHolidayActive", bool);
+}
+
+::GetRoundDuration <- function()
+{   // Returns the round time in seconds.
+    return Time() - NetProps.GetPropFloat(Entities.FindByClassname(null, "cs_gamerules"), "m_iRoundTime");
+}
+
+::GetRoundTime <- function()
+{   // Returns the duration of the current round
+    return Time() - NetProps.GetPropFloat(Entities.FindByClassname(null, "cs_gamerules"), "m_fRoundStartTime");
+}
+
+::GetCompleteRoundTime <- function()
+{   // Returns the duration of the current round but it includes the freeze time.
+    return Time() - NetProps.GetPropFloat(Entities.FindByClassname(null, "cs_gamerules"), "m_flGameStartTime"); 
+}
+
+::MapHasBombTarget <- function()
+{   // Returns true if the map has bomb target
+    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bMapHasBombTarget");
+}
+
+::MapHasRescueZone <- function()
+{   // Returns true if the map has rescue zone
+    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bMapHasRescueZone");
+}
+

@@ -3,7 +3,7 @@ if (this != getroottable())
     throw "This script must the included in the root scope, please.";
 
 Msg("\n[CSS Custom Functions] Loading script...\n");
-
+Entities.First().ValidateScriptScope(); // In case we want to store smth when reloading this file.
 ///// CONSTANTS BECAUSE VALVE FORGOT TO INCLUDE THEM IN CSS /////
 
 // PLAYER CLASS
@@ -460,6 +460,8 @@ const kRenderFxMax = 25;
     return NetProps.GetPropInt(client, "m_iClass");
 }
 
+// This may be used as a fix for the SAS throwing issue. Or you just can use SetModelSimple()
+// Keep in mind if you don't set a model that belongs to its class, the model will be set automatically in a new round.
 ::SetPlayerClass <- function(client, iClass, bShouldSetModel = false)   // If bShouldSetModel is true, the function will change the model as well.
 {   // Changes the class of a player. Note: You can't set any class outside the team the player belongs in (ex. PHOENIX to SAS).
     local bHasChanged = false;
@@ -731,6 +733,16 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
         NetProps.SetPropInt(client, "m_iAccount", amount);
 }
 
+::GetPlayerLanguage <- function(client)
+{   // Returns the cl_language value from a player.
+    Convars.GetClientConvarValue("cl_language", client.entindex());
+}
+
+::GetPlayerConnectMethod <- function(client)
+{   // Returns the cl_connectmethod from a player (How the client joined the server. E.g. listenserver, serverbrowser_internet, serverbrowser_favorites)
+    Convars.GetClientConvarValue("cl_connectmethod", client.entindex());
+}
+
 ::ToggleDrawViewmodel <- function(client)
 {   // Client-side function: hide or show the view model. It resets every round. Some entities like "point_viewcontrol" messes with the netprop.
     // It doesn't hide the muzzleflash.
@@ -898,6 +910,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
     return vPrime;
 }
 
+
 // UTILS
 ::Ent <- function( idxorname )
 {   // "Takes an entity index or name, returns the entity" - Ported from l4d2 scriptedmode.nuc
@@ -976,7 +989,136 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
     return vPos;
 }
 
+::UpdateTable <- {
+    IsLoaded = false
+    UpdateEnt = null
+    UpdateFuncAmount = 0
+    UpdateGroup = [/*{funcname = (function : 0x000001EE46F6CA60) refire_interval = 1.0 timer = Time() is_disabled = false}*/]
+    Init = function()
+    {
+        if (UpdateTable.IsLoaded)   // This function should be called once per map load.
+        {
+            error("[UpdateTable] Init function can only be called once per map load\n");
+            return;
+        }
 
+        local worldspawn_table = Entities.First().GetScriptScope();
+        if (!("UpdateEnt" in worldspawn_table) || ("UpdateEnt" in worldspawn_table && !IsValidSafe(worldspawn_table["UpdateEnt"])))
+        {
+            UpdateTable.UpdateEnt = Entities.CreateByClassname("info_target");
+            UpdateTable.UpdateEnt.KeyValueFromString("targetname", UniqueString("_UpdateEntity_"));
+            UpdateTable.UpdateEnt.DispatchSpawn();
+            worldspawn_table["UpdateEnt"] <- UpdateTable.UpdateEnt;
+        }
+        else 
+            UpdateTable.UpdateEnt = worldspawn_table["UpdateEnt"];
+
+        if (!("UpdateGroup" in worldspawn_table))
+        {
+            worldspawn_table["UpdateGroup"] <- [];
+        }
+        else
+            UpdateTable.UpdateGroup = worldspawn_table["UpdateGroup"];
+
+        UpdateTable.UpdateEnt.ValidateScriptScope();
+        UpdateTable.UpdateEnt.GetScriptScope()["UpdateFunc"] <- function() {UpdateTable.UpdateFunc(); return -1;};
+        AddThinkToEnt(UpdateTable.UpdateEnt, "UpdateFunc");
+        UpdateTable.IsLoaded = true;
+    }
+
+    UpdateFunc = function () 
+    {
+        foreach (idx, func in UpdateTable.UpdateGroup) 
+        {
+            if (Time() - UpdateTable.UpdateGroup[idx]["timer"] >= UpdateTable.UpdateGroup[idx]["refire_interval"])
+            {
+                UpdateTable.UpdateGroup[idx]["timer"] = Time();
+                if (!UpdateTable.UpdateGroup[idx]["is_disabled"])
+                    UpdateTable.UpdateGroup[idx]["funcname"]();
+            }
+        }
+    }
+
+    IsInUpdateGroup = function(func)
+    {
+        for (local i = 0; i < UpdateTable.UpdateGroup.len(); i++)
+        {
+            if (UpdateTable.UpdateGroup[i]["funcname"] == func)
+                return UpdateTable.UpdateGroup[i];
+        }
+        return null;
+    }
+
+    AddUpdate = function(func, interval = 1.0, start_disabled = false)  // I belive the lowest interval is 0.015 for 66 ticks.
+    { 
+        if (typeof func != "function")
+        {
+            error("[UpdateTable] The parameter <func> must be a function type\n");
+            return;
+        }
+        else if (func.getinfos()["name"] == null)
+        {
+            error("[UpdateTable] The function must have a name. Please.\n");
+            return;
+        }
+        else if (UpdateTable.IsInUpdateGroup(func) != null)
+        {
+            error("[UpdateTable] The function " + func.tostring() + " is already added!\n");
+            return false;
+        }
+        local new_table = {funcname = func refire_interval = interval timer = Time() is_disabled = false};
+        UpdateTable.UpdateGroup.append(new_table);
+        Entities.First().GetScriptScope()["UpdateGroup"].append(new_table);   // Also in the worldspawn table just in case.
+        UpdateTable.UpdateFuncAmount++;
+        return true;
+    }
+
+    ToggleUpdate = function(func)
+    {
+        local bDidToggle = false;
+        for (local i = 0; i < UpdateTable.UpdateGroup.len(); i++)
+        {
+            if (UpdateTable.UpdateGroup[i]["funcname"] == func)
+            {
+                if (UpdateTable.UpdateGroup[i]["is_disabled"])
+                {
+                    UpdateTable.UpdateGroup[i]["is_disabled"] = false;
+                    Entities.First().GetScriptScope()["UpdateGroup"][i]["is_disabled"] = false;
+                    printl("[UpdateTable] Function " + UpdateTable.UpdateGroup[i]["funcname"].tostring() + " DISABLED.");
+                }
+                else 
+                {
+                    UpdateTable.UpdateGroup[i]["is_disabled"] = true;
+                    Entities.First().GetScriptScope()["UpdateGroup"][i]["is_disabled"] = true;
+                    printl("[UpdateTable] Function " + UpdateTable.UpdateGroup[i]["funcname"].tostring() + " ENABLED.");
+                }    
+                bDidToggle = true;
+                break;
+            }
+        }
+        return bDidToggle;
+    }
+
+    RemoveUpdate = function(func)
+    {
+        local bDidRemove = false;
+        for (local i = 0; i < UpdateTable.UpdateGroup.len(); i++)
+        {
+            if (UpdateTable.UpdateGroup[i]["funcname"] == func)
+            {
+                printl("[UpdateTable] Removing " + UpdateTable.UpdateGroup[i]["funcname"].tostring() + " function...");
+                UpdateTable.UpdateGroup.remove(i);
+                bDidRemove = true;
+                break;
+            }
+        }
+        if (bDidRemove)
+            UpdateTable.UpdateFuncAmount--;
+
+        return bDidRemove;
+    }
+}
+UpdateTable.Init();
 
 // MISC
 ::IsCheatingSession <- function()

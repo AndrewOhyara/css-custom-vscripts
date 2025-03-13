@@ -4,30 +4,27 @@ if (this != getroottable())
 
 Msg("\n[CSS Custom Functions] Loading script...\n");
 
-// TEAM
-const TEAM_UNASSIGNED = 0;  // "Select Team" screen.
-const TEAM_SPECTATOR = 1;
-const TEAM_TERRORIST = 2;
-const TEAM_COUNTER_TERRORIST = 3;
+///// CONSTANTS BECAUSE VALVE FORGOT TO INCLUDE THEM IN CSS /////
 
 // PLAYER CLASS
 enum CS_PLAYER_CLASS 
 {   // This is the order of the player class for m_iClass netprop.
-    NOCLASS,    // Spectator/Unassigned
+    NO_CLASS,    // 0: Spectator/Unassigned
     // Terrorist
-    PHOENIX_CONNEXION,
-    ELITE_CREW,
-    ARCTIC_AVENGERS,
-    GUERILLA_WARFARE,
+    PHOENIX_CONNEXION,  // 1
+    ELITE_CREW, // 2
+    ARCTIC_AVENGERS,    // 3
+    GUERILLA_WARFARE,   // 4
     // Counter-Terrorist
-    SEAL_TEAM_6,
-    GSG_9,
-    SAS,
-    GIGN
+    SEAL_TEAM_6,    // 5
+    GSG_9,  // 6
+    SAS,    // 7
+    GIGN    // 8
 }
+
 enum CS_PLAYER_SKIN
-{
-    NOCLASS = "",    // Spectator/Unassigned
+{   // The same as above but with their modelnames.
+    NO_CLASS = "",    // Spectator/Unassigned
     // Terrorist
     PHOENIX_CONNEXION = "models/player/t_phoenix.mdl",
     ELITE_CREW = "models/player/t_leet.mdl",
@@ -39,6 +36,12 @@ enum CS_PLAYER_SKIN
     SAS = "models/player/ct_sas.mdl",
     GIGN = "models/player/ct_gign.mdl"
 }
+
+// TEAM. The amount of "cs_team_manager" entities is the same as the amount of teams. DO NOT EVEN DARE TO KILL THEM. Please :p
+const TEAM_UNASSIGNED = 0;  // "Select Team" screen.
+const TEAM_SPECTATOR = 1;
+const TEAM_TERRORIST = 2;
+const TEAM_COUNTER_TERRORIST = 3;
 
 // CBasePlayer BUTTONS
 const IN_ATTACK = 1;
@@ -98,7 +101,7 @@ const DMG_PLASMA = 16777216;
 const DMG_AIRBOAT = 33554432;
 const DMG_DISSOLVE = 67108864;
 const DMG_BLAST_SURFACE = 134217728;
-const DMG_DIRECT = 268435456;
+const DMG_DIRECT = 268435456;   // Damage from being on fire. (DMG_BURN relates to external sources hurting you). Entityflame 
 const DMG_BUCKSHOT = 536870912;
 const DMG_HEADSHOT = 1073741824;
 const DMG_LASTGENERICFLAG = -2147483648;
@@ -137,6 +140,123 @@ const FL_ONFIRE = 268435456;
 const FL_DISSOLVING = 536870912;
 const FL_TRANSRAGDOLL = 1073741824;
 const FL_UNBLOCKABLE_BY_PLAYER = 2147483648;
+
+// [NO OFFICIAL] WATER LEVEL
+const WL_NOTINWATER = 0;
+const WL_FEET = 1;  // The origin of the entity.
+const WL_WAIST = 2; // The center of the entity.
+const WL_EYES = 3;  // The eyes of the entity.
+
+// MOVETYPE
+const MOVETYPE_NONE	= 0; // Freezes the entity, outside sources can't move it.
+const MOVETYPE_ISOMETRIC = 1;    // For players in TF2 commander view etc. Do not use this for normal players!
+const MOVETYPE_WALK = 2; // 	Default player (client) move type.
+const MOVETYPE_STEP = 3; // NPC movement
+const MOVETYPE_FLY = 4;  // Fly with no gravity.
+const MOVETYPE_FLYGRAVITY = 5;   // Fly with gravity.
+const MOVETYPE_VPHYSICS = 6;    // Physics movetype (prop models etc.)
+const MOVETYPE_PUSH = 7;    // No clip to world, but pushes and crushes things.
+const MOVETYPE_NOCLIP = 8;  // Noclip, behaves exactly the same as console command.
+const MOVETYPE_LADDER = 9;  // For players, when moving on a ladder.
+const MOVETYPE_OBSERVER = 10;   // Spectator movetype. DO NOT use this to make player spectate.
+const MOVETYPE_CUSTOM = 11; // Custom movetype, can be applied to the player to prevent the default movement code from running, while still calling the related hooks.
+const MOVETYPE_LAST = 11;   // This is for...? Confirm: This works in css.
+
+// MOVECOLLIDE
+const MOVECOLLIDE_DEFAULT =	0;
+const MOVECOLLIDE_FLY_BOUNCE = 1;
+const MOVECOLLIDE_FLY_CUSTOM = 2;
+const MOVECOLLIDE_FLY_SLIDE	= 3;
+const MOVECOLLIDE_MAX_BITS = 3;
+const MOVECOLLIDE_COUNT = 4;
+
+// COLLISION GROUPS
+const COLLISION_GROUP_NONE = 0;
+const COLLISION_GROUP_DEBRIS = 1;
+const COLLISION_GROUP_DEBRIS_TRIGGER = 2;
+const COLLISION_GROUP_INTERACTIVE_DEBRIS =3;
+const COLLISION_GROUP_INTERACTIVE = 4;
+const COLLISION_GROUP_PLAYER = 5;
+const COLLISION_GROUP_BREAKABLE_GLASS = 6;
+const COLLISION_GROUP_VEHICLE = 7;
+const COLLISION_GROUP_PLAYER_MOVEMENT = 8;
+const COLLISION_GROUP_NPC = 9;
+const COLLISION_GROUP_IN_VEHICLE = 10;
+const COLLISION_GROUP_WEAPON = 11;
+const COLLISION_GROUP_VEHICLE_CLIP = 12;
+const COLLISION_GROUP_PROJECTILE = 13;
+const COLLISION_GROUP_DOOR_BLOCKER = 14;
+const COLLISION_GROUP_PASSABLE_DOOR = 15;
+const COLLISION_GROUP_DISSOLVING = 16;
+const COLLISION_GROUP_PUSHAWAY = 17;
+const COLLISION_GROUP_NPC_ACTOR = 18;
+const COLLISION_GROUP_NPC_SCRIPTED = 19;
+const LAST_SHARED_COLLISION_GROUP = 20;
+
+// HUD NOTIFY
+const HUD_PRINTNOTIFY = 1;
+const HUD_PRINTCONSOLE = 2;
+const HUD_PRINTTALK = 3;
+const HUD_PRINTCENTER = 4;
+
+// ENTITY EFFECTS
+const EF_NONE = 0;  // This does not exist but it's here for easy understanding.
+const EF_BONEMERGE = 1; // Bonemerge always (very expensive!). Merges bones of names shared with a parent entity to the position and direction of the parent's.
+const EF_BRIGHTLIGHT = 2;   // Bright, dynamic light at entity origin. Emits a dynamic light of RGB(250,250,250) and a random radius of 400 to 431 from the origin.
+const EF_DIMLIGHT = 4;  // Dim, dynamic light at entity origin" | player's flashlight
+const EF_NOINTERP = 8;  // No movement interpolation. Don't interpolate on the next frame. May cause crashes!
+const EF_MAX_BITS = 10;
+const EF_NOSHADOW = 16; // Don't cast shadows. Don't create a render-to-texture shadow, does not affect projected texture shadows.
+const EF_NODRAW = 32;   // Don't draw entity (entity is fully ignored by clients, NOT server; can cause collision problems)
+const EF_NORECEIVESHADOW = 64;  // Don't receive dynamic shadows.
+const EF_BONEMERGE_FASTCULL = 128;  // Bonemerge only in PVS, better performance but prone to disappearing. Use with Bonemerge.
+const EF_ITEM_BLINK = 256;  // Unsubtle blink. Blink an item so that the user notices it. Added for original Xbox, and not very subtle.
+const EF_PARENT_ANIMATES = 512; // Flag parent as always animating and realign each frame.
+
+// RENDER MODE  || wtf with these tf2's constant names?
+const kRenderNormal = 0;
+const kRenderTransColor = 1;
+const kRenderTransTexture = 2;
+const kRenderGlow = 3;
+const kRenderTransAlpha = 4;
+const kRenderTransAdd = 5;
+const kRenderEnvironmental = 6;
+const kRenderTransAddFrameBlend = 7;
+const kRenderTransAlphaAdd = 8;
+const kRenderWorldGlow = 9;
+const kRenderNone = 10;
+const kRenderModeCount = 11;    // Confirm: This works in css.
+
+// RENDER FX
+const kRenderFxNone = 0;
+const kRenderFxPulseSlow = 1;
+const kRenderFxPulseFast = 2;
+const kRenderFxPulseSlowWide = 3;
+const kRenderFxPulseFastWide = 4;
+const kRenderFxFadeSlow = 5;
+const kRenderFxFadeFast = 6;
+const kRenderFxSolidSlow = 7;
+const kRenderFxSolidFast = 8;
+const kRenderFxStrobeSlow = 9;
+const kRenderFxStrobeFast = 10;
+const kRenderFxStrobeFaster = 11;
+const kRenderFxFlickerSlow = 12;
+const kRenderFxFlickerFast = 13;
+const kRenderFxNoDissipation =14;
+const kRenderFxDistort = 15;
+const kRenderFxHologram = 16;
+const kRenderFxExplode = 17;
+const kRenderFxGlowShell = 18;
+const kRenderFxClampMinScale = 19;
+const kRenderFxEnvRain = 20;
+const kRenderFxEnvSnow = 21;
+const kRenderFxSpotlight = 22;
+const kRenderFxRagdoll = 23;
+const kRenderFxPulseFastWider = 24;
+const kRenderFxMax = 25;
+
+
+
 
 ::MaxPlayers <- MaxClients().tointeger(); // Extracted from: https://developer.valvesoftware.com/wiki/Source_SDK_Base_2013/Scripting/VScript_Examples#Iterating_Through_Players
 ::GetListenServerHost <- @() PlayerInstanceFromIndex(1);
@@ -345,32 +465,30 @@ const FL_UNBLOCKABLE_BY_PLAYER = 2147483648;
     local bHasChanged = false;
     local team = client.GetTeam();
     local models = [    // If valve dares to change the values...
-        "models/player/t_phoenix.mdl",    // Spectator/Unassigned. This slot will never be used anyway.
+        CS_PLAYER_SKIN.NO_CLASS,    // Spectator/Unassigned. This slot will never be used anyway.
         // Terrorist
-        "models/player/t_phoenix.mdl",
-        "models/player/t_leet.mdl",
-        "models/player/t_arctic.mdl",
-        "models/player/t_guerilla.mdl",
+        CS_PLAYER_SKIN.PHOENIX_CONNEXION,
+        CS_PLAYER_SKIN.ELITE_CREW,
+        CS_PLAYER_SKIN.ARCTIC_AVENGERS,
+        CS_PLAYER_SKIN.GUERILLA_WARFARE,
         // Counter-Terrorist
-        "models/player/ct_urban.mdl",
-        "models/player/ct_gsg9.mdl",
-        "models/player/ct_sas.mdl",
-        "models/player/ct_gign.mdl"
+        CS_PLAYER_SKIN.SEAL_TEAM_6,
+        CS_PLAYER_SKIN.GSG_9,
+        CS_PLAYER_SKIN.SAS,
+        CS_PLAYER_SKIN.GIGN,
     ];
     
     if ((iClass > 0 && iClass < 9) && team > 1)
     {
         if (iClass <= 4 && team == 2)
-        {
+        {   // TERRORIST
             NetProps.SetPropInt(client, "m_iClass", iClass);
             bHasChanged = true;
-            print("TERROR")
         }
         else if (iClass >= 5 && team == 3)
-        {
+        {   // COUNTER-TERRORIST
             NetProps.SetPropInt(client, "m_iClass", iClass);
             bHasChanged = true;
-            print("CT")
         }
         if (bShouldSetModel && bHasChanged)
         {   
@@ -378,29 +496,27 @@ const FL_UNBLOCKABLE_BY_PLAYER = 2147483648;
             client.SetModelSimple(models[iClass]);
         } 
     }
-    return;
 }
 
 ::GetPlayerClassString <- function(client)
 {   // Same as above, but it will return the name of the class
-    local iClass = NetProps.GetPropInt(client, "m_iClass");
-    switch (iClass) 
+    switch (NetProps.GetPropInt(client, "m_iClass")) 
     {
-        case 1:
+        case CS_PLAYER_CLASS.PHOENIX_CONNEXION:
             return "Phoenix Connexion";
-        case 2:
+        case CS_PLAYER_CLASS.ELITE_CREW:
             return "Elite Crew";
-        case 3:
+        case CS_PLAYER_CLASS.ARCTIC_AVENGERS:
             return "Arctic Avengers";
-        case 4:
+        case CS_PLAYER_CLASS.GUERILLA_WARFARE:
             return "Guerilla Warfare";
-        case 5:
+        case CS_PLAYER_CLASS.SEAL_TEAM_6:
             return "Seal Team 6";
-        case 6:
+        case CS_PLAYER_CLASS.GSG_9:
             return "GSG-9";
-        case 7:
+        case CS_PLAYER_CLASS.SAS:
             return "SAS";
-        case 8:
+        case CS_PLAYER_CLASS.GIGN:
             return "GIGN";
         default:
             return null;
@@ -796,13 +912,21 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 	//printl( "Hey! no entity for " + idxorname );
 }
 
+::IsValidSafe <- function(any_ent)
+{   // Your typical NULL pointer prevention. The variable may not be null but still storing an instance object that's invalid. That's where IsValid() shines.
+    if (any_ent != null && any_ent.IsValid())
+        return true;
+
+    return false;
+}
+
 ::GetPlayers <- function(bShouldPrint = false)
 {   // Returns the clients in an array.
     local players = [];
     for (local i = 1; i <= MaxPlayers; i++)
     {
         local player = PlayerInstanceFromIndex(i);  // We want clients, that's why we are not using Ent()
-        if (!player || player == null || !player.IsValid())
+        if (!IsValidSafe(player))
             continue;
 
         players.push(player);
@@ -811,6 +935,24 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
             printl(i + " | Name: " + GetPlayerName(player) + " | Team: " + player.GetTeam() + (IsPlayerABot(player) ? " | BOT": ""));
     }
     return players;
+}
+
+::GetPlayerByName <- function(stringUserName)
+{   // Returns the player handle by it's name...?
+    local client = null;
+    local name_to_look_for = strip(stringUserName).tolower();
+    local players = GetPlayers();
+    for (local i = 0; i < players.len(); i++)
+    {
+        local player = players[i];
+        local username = GetPlayerName(player).tolower();
+        if (username == name_to_look_for || username.find(name_to_look_for) != null)
+        {
+            client = player;
+            break;
+        }
+    }
+    return client;
 }
 
 ::GetBombPlayer <- function()

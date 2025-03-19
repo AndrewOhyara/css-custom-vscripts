@@ -37,10 +37,9 @@
     return NetProps.GetPropString(client, "m_szLastPlaceName");
 }
 
-// Is "cs_player_manager" EntIndexToHScript(MaxClients().tointeger()+6)?
 ::GetPlayerUserID <- function(client)
 {
-    return NetProps.GetPropIntArray(PLAYER_MANAGER_ENTITY, "m_iUserID", client.entindex());
+    return NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iUserID", client.entindex());
 }
 
 
@@ -90,7 +89,7 @@
 /*
 ::GetAccountID <- function(client)
 {   // Returns the "AccountID" of the player (The third slot of a SteamID3)
-    return NetProps.GetPropStringArray(PLAYER_MANAGER_ENTITY, "m_iAccountID", client.entindex());
+    return NetProps.GetPropStringArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iAccountID", client.entindex());
 }
 */
 
@@ -208,12 +207,12 @@
 
 ::GetPlayerPing <- function(client)
 {
-    return NetProps.GetPropIntArray(PLAYER_MANAGER_ENTITY, "m_iPing", client.entindex());
+    return NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iPing", client.entindex());
 }
 
 ::GetPlayerClanTag <- function(client)
 {
-    return NetProps.GetPropStringArray(PLAYER_MANAGER_ENTITY, "m_szClan", client.entindex());
+    return NetProps.GetPropStringArray(Entities.FindByClassname(null, "cs_player_manager"), "m_szClan", client.entindex());
 }
 
 
@@ -222,7 +221,7 @@
 // The amount doesn't reset when changing to the spectator team unless the spectator joins again to any team.
 ::GetPlayerMVPs <- function(client)
 {   // Retuns the MVPs of a player.
-   return NetProps.GetPropIntArray(PLAYER_MANAGER_ENTITY, "m_iMVPs", client.entindex());
+   return NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iMVPs", client.entindex());
 }
 
 // NOTE: The amount doesn't reset when changing to the spectator team unless the spectator joins again to any team.
@@ -243,7 +242,7 @@
 
 ::GetPlayerScore <- function(client)
 {   // Returns the score of the player.
-    return NetProps.GetPropIntArray(PLAYER_MANAGER_ENTITY, "m_iScore", client.entindex());
+    return NetProps.GetPropIntArray(Entities.FindByClassname(null, "cs_player_manager"), "m_iScore", client.entindex());
 } // You cannot set the amount tho... You can use game_score in that case.
 
 ::GetPlayerLanguage <- function(client)
@@ -264,7 +263,6 @@
 {   // Returns the value of the armor (kevlar/kevlar+helmet).
     return NetProps.SetPropInt(client, "m_ArmorValue", value);
 }
-
 
 // NOTES:
 // This may be used as a fix for the SAS throwing issue. Or you just can use SetModelSimple()
@@ -338,8 +336,10 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 }
 // ---------------------- GIVING SCORE TO PLAYERS --------------------- //
 
-
-
+::SetPlayerTeam <- function(client, team)
+{   // Changes the "m_iTeamNum" netprop. Unlike client.SetTeam(team), you won't die. But it may bring undesired effects.
+    NetProps.SetPropInt(client, "m_iTeamNum", team);
+}
 
 
 // STATEMENTS
@@ -390,6 +390,18 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 }
 
 // UTIL FUNCTIONS
+::Player <- function(userid_or_name)
+{   // "Takes a player userid or username, returns the entity"
+    local hPlayer = null;
+    if (typeof userid_or_name == "string")
+        hPlayer = GetPlayerByName(userid_or_name);  // RemoveQuotationMarks() is already implemented in the method
+    else if (typeof userid_or_name == "integer")
+        hPlayer = GetPlayerFromUserID(userid_or_name);
+    
+    if(IsValidSafe(hPlayer))
+        return hPlayer; 
+}
+
 ::GetPlayers <- function(bShouldPrint = false)
 {   // Returns the clients in an array.
     local players = [];
@@ -410,7 +422,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
 ::GetPlayerByName <- function(stringUserName =  "")
 {   // Returns the player handle by it's username...?
     local client = null;
-    local name_to_look_for = strip(stringUserName).tolower();
+    local name_to_look_for = RemoveQuotationMarks(strip(stringUserName)).tolower();
     local players = GetPlayers();
     for (local i = 0; i < players.len(); i++)
     {
@@ -418,7 +430,7 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
         if (!IsValidSafe(player))
             continue;
 
-        local username = strip(GetPlayerName(player)).tolower();
+        local username = RemoveQuotationMarks(strip(GetPlayerName(player))).tolower();
         if (username == name_to_look_for || username.find(name_to_look_for) != null)
         {
             client = player;
@@ -426,6 +438,30 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
         }
     }
     return client;
+}
+
+// Notes: 
+// To use this, you must include the function like this:
+/*
+// Let's say you want to slay everyone:
+DoAllPlayers(function(client){
+    if ((client.GetTeam() != 2 && client.GetTeam() != 3))
+        return;
+
+    SlayPlayer(client, 2) // DMG_BULLET
+})
+*/
+::DoAllPlayers <- function(func, team = null, bIgnoreBots = false, bIgnoreHumans = false)
+{   // Performs method to each client. You can filter by team, bots and human players too.
+    local players = GetPlayers();
+    for (local i = 0; i < players.len(); i++)
+    {
+        local client = players[i];
+        if (!IsValidSafe(client) || (team && client.GetTeam() != team) || (bIgnoreBots && IsPlayerABot(client)) || (bIgnoreHumans && !IsPlayerABot(client)))
+            continue;
+
+        func(client);   // It took me 2 days to understand this line.
+    }
 }
 
 ::GetDominationList <- function(client, type = 0, bShouldPrint = false)
@@ -466,4 +502,70 @@ if (("CurrentMainGameScoreEnt" in this) && (CurrentMainGameScoreEnt != null && C
     else
         NetProps.SetPropBool(client, "localdata.m_Local.m_bDrawViewmodel", true);
 }
+
+// NOTE: 
+// If mp_friendlyfire is 0 and the client and the attacker are in the same team, the client won't be slayed unless you enable ff.
+::SlayPlayer <- function(client, dmg_type = DMG_GENERIC, attacker = WORLDSPAWN)
+{   // Slays a player. By default, the attacker is the world. Setting to null, the attacker is the client.
+    client.TakeDamage(client.GetMaxHealth() * client.GetMaxHealth(), dmg_type, attacker);
+}
+
+::SwapPlayerTeam <- function(client, bShouldSetModel = false)
+{   // Swaps the player team. Only for CT and TT players.
+    local iClass = GetPlayerClass(client);
+    if (client.GetTeam() != 2 && client.GetTeam() !=  3)
+        return;
+
+    switch (iClass) 
+    {
+        // TERRORIST
+        case CS_PLAYER_CLASS.PHOENIX_CONNEXION:
+            SetPlayerTeam(client, 3);
+            SetPlayerClass(client, CS_PLAYER_CLASS.SEAL_TEAM_6, bShouldSetModel);
+            break;
+        case CS_PLAYER_CLASS.ELITE_CREW:
+            SetPlayerTeam(client, 3);
+            SetPlayerClass(client, CS_PLAYER_CLASS.GSG_9, bShouldSetModel);
+            break;
+        case CS_PLAYER_CLASS.ARCTIC_AVENGERS:
+            SetPlayerTeam(client, 3);
+            SetPlayerClass(client, CS_PLAYER_CLASS.SAS, bShouldSetModel);
+            break;
+        case CS_PLAYER_CLASS.GUERILLA_WARFARE:
+            SetPlayerTeam(client, 3);
+            SetPlayerClass(client, CS_PLAYER_CLASS.GIGN, bShouldSetModel);
+            break;
+        // COUNTER-TERRORIST
+        case CS_PLAYER_CLASS.SEAL_TEAM_6:
+            SetPlayerTeam(client, 2);
+            SetPlayerClass(client, CS_PLAYER_CLASS.PHOENIX_CONNEXION, bShouldSetModel);
+            break;
+        case CS_PLAYER_CLASS.GSG_9:
+            SetPlayerTeam(client, 2);
+            SetPlayerClass(client, CS_PLAYER_CLASS.ELITE_CREW, bShouldSetModel);
+            break;
+        case CS_PLAYER_CLASS.SAS:
+            SetPlayerTeam(client, 2);
+            SetPlayerClass(client, CS_PLAYER_CLASS.ARCTIC_AVENGERS, bShouldSetModel);
+            break;
+        case CS_PLAYER_CLASS.GIGN:
+            SetPlayerTeam(client, 2);
+            SetPlayerClass(client, CS_PLAYER_CLASS.GUERILLA_WARFARE, bShouldSetModel);
+    }
+}
+
+// NOTE: It won't work unless everyone has changed their collision group to 2 or 17
+::ToggleNoblock <- function(client) 
+{   // Enables/Disables the player colliding with another players.
+    local collision_group = client.GetCollisionGroup();
+    if (collision_group != 2 && collision_group !=  17)   
+    {
+        client.SetCollisionGroup(COLLISION_GROUP_DEBRIS_TRIGGER);   // 2
+    }
+    else 
+    {
+        client.SetCollisionGroup(COLLISION_GROUP_PLAYER);
+    }
+}
+
 

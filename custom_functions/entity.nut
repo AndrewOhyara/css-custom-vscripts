@@ -1,18 +1,14 @@
 // ENTITY
 // FUNCTIONS
-
 // Syntax: DissolveEntity(<Handle entity or Int entindex>, <Int type>, <Int magnitude>)
 ::DissolveEntity <- function(any, type = 0, magnitude = 0)
 {   // Dissolves any physical entity. WARNING: Undesired effects on players if this used on them. (Use this method on their ragdolls instead)
     local ent = any;
     if (typeof any == "integer")
-    {
         ent = Ent(any);
-    }
     else if (typeof ent != "instance")
-    {
         return;
-    }
+    
     if (ent == Entities.First())
         return;
 

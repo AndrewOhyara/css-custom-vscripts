@@ -8,15 +8,15 @@ enum CS_PLAYER_CLASS
 {   // This is the order of the player class for m_iClass netprop.
     NO_CLASS,    // 0: Spectator/Unassigned
     // Terrorist
-    PHOENIX_CONNEXION,  // 1
+    PHOENIX_CONNEXION,  // 1 
     ELITE_CREW, // 2
     ARCTIC_AVENGERS,    // 3
     GUERILLA_WARFARE,   // 4
     // Counter-Terrorist
-    SEAL_TEAM_6,    // 5
-    GSG_9,  // 6
-    SAS,    // 7
-    GIGN    // 8
+    SEAL_TEAM_6,    // 5    | 1 in class selection
+    GSG_9,  // 6    | 2 in class selection
+    SAS,    // 7    | 3 in class selection
+    GIGN    // 8    | 4 in class selection
 }
 
 enum CS_PLAYER_SKIN
@@ -189,6 +189,16 @@ const COLLISION_GROUP_PUSHAWAY = 17;
 const COLLISION_GROUP_NPC_ACTOR = 18;
 const COLLISION_GROUP_NPC_SCRIPTED = 19;
 const LAST_SHARED_COLLISION_GROUP = 20;
+
+// SOLID TYPE
+const SOLID_NONE = 0;
+const SOLID_BSP = 1;
+const SOLID_BBOX = 2;
+const SOLID_OBB = 3;
+const SOLID_OBB_YAW = 4;
+const SOLID_CUSTOM = 5;
+const SOLID_VPHYSICS = 6;
+const SOLID_LAST = 7;
 
 // HUD NOTIFY
 const HUD_PRINTNOTIFY = 1;

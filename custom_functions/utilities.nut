@@ -19,21 +19,31 @@
 		return hEnt;
 }
 
+::GetGamerules <- function()    // This was initially a global but it sometimes returned NULL so, no.
+{ // Returns the cs_gamerules entity. It's a shortcut of Entities.FindByClassname(null, "cs_gamerules").
+    return Entities.FindByClassname(null, "cs_gamerules");
+}
+
+::GetPlayerManager <- function () 
+{ // Returns the cs_player_manager entity. It's a shortcut of Entities.FindByClassname(null, "cs_player_manager").
+    return Entities.FindByClassname(null, "cs_player_manager");
+}
+
 ::GetBombPlayer <- function()
 {   // Returns the index of the player that is carrying the bomb. There must be only one c4 per map.
-    return NetProps.GetPropInt(PLAYER_MANAGER_ENTITY, "m_iPlayerC4");
+    return NetProps.GetPropInt(Entities.FindByClassname(null, "cs_player_manager"), "m_iPlayerC4");
 }
 
 ::GetBombPosition <- function()
 {   // Returns the vector position of the bomb. There must be only one c4 per map.
-    return NetProps.GetPropVector(PLAYER_MANAGER_ENTITY, "m_vecC4");
+    return NetProps.GetPropVector(Entities.FindByClassname(null, "cs_player_manager"), "m_vecC4");
 }
 
-// Warning: Calling other positions than 'a' and 'b' will return any of those two vectors spots.
+// [WARNING]: Calling other positions than 'a' and 'b' will return any of those two vectors spots.
 ::GetBombsitePosition <- function(bombsite = "", bShouldPrint = false)
 {   // Returns the center vector of a desired bombsite (based on func_bombsite center?). There are only "A" and "B" bombsites in a defuse map.
     local sBombsite = bombsite.toupper();
-    local vBombiste = NetProps.GetPropVector(PLAYER_MANAGER_ENTITY, "m_bombsiteCenter" + sBombsite);
+    local vBombiste = NetProps.GetPropVector(Entities.FindByClassname(null, "cs_player_manager"), "m_bombsiteCenter" + sBombsite);
     if (bShouldPrint)
         printl("Found Bombsite " + sBombsite + " at " + vBombiste.ToKVString());
 
@@ -41,7 +51,8 @@
 }
 
 // STRING
-// Imagine someone using quotation marks for their username. Quite annoying when trying to store it in a variable.
+// Imagine someone using quotation marks for their username. Like: I like "cheeseburger".
+// Quite annoying when trying to store it in a variable or in a file to causing errors later on reading.
 // I may recommend you this function for every username you want to store just in case.
 // If the username doesn't have any quotation marks, the method will just return the string.
 ::RemoveQuotationMarks <- function(string = "")
@@ -65,20 +76,13 @@
 // if "var_default" is not null, "var" will take its value instead of "var_min" or "var_max".
 ::Clamp <- function(var, var_min, var_max, var_default = null)
 {   // Your typical clamp function to ensure the boundaries of your variable
-    if (var < var_min)
-    {
-        if (var_default != null)
-            var = var_default;
-        else
-            var = var_min;
-    }
+    if (var_default != null && (var < var_min || var > var_max))
+        var = var_default
+    else if (var < var_min)
+        var = var_min;
     else if (var > var_max)
-    {
-        if (var_default != null)
-            var = var_default;
-        else
-            var = var_max;
-    }
+        var = var_max;
+
     return var;
 }
 
@@ -152,11 +156,47 @@
 }
 
 // FOR DEBUGGING
-function DeepPrintTable(table)  // Backported and modified from l4d2 "sm_utilities.nut"
+::DeepPrintTable <- function(table, prefix = "", bShouldPrint = true)  // Backported and modified from l4d2 "sm_utilities.nut"
 {   
-	printl("{\n");
+    local tData =  "\n" + prefix + "{\n";
+    foreach (key, val in table) 
+    {
+        tData = tData + prefix + "\t" + key + " = ";
+        local val_type = typeof val;
+        if (val_type == "table")
+        {
+            tData = tData + prefix + DeepPrintTable(val, "\t\t",false);
+        }
+        else if (val_type == "array")
+        {
+            tData = tData + prefix + "\n\t[\n";
+            for (local i = 0; i < val.len(); i++)
+            {
+                local arr_val = val[i];
+                local arr_val_type = typeof arr_val;
+                if (arr_val_type == "table")
+                {
+                    tData = tData + prefix + DeepPrintTable(arr_val, "\t\t",false);
+                }
+                else if (arr_val_type == "string")
+                    tData = tData + "\t\t\"" + arr_val + "\",\n";
+                else
+                    tData = tData + "\t\t" + arr_val + ",\n"
+            }
+            tData = tData + prefix + "\n\t]\n";
+        }
+        else if (val_type == "string")
+        {
+            tData = tData + "\"" + val + "\"\n";
+        }
+        else 
+            tData = tData + val + "\n";
+    }
+    tData = tData + prefix + "}\n";
 
-    print("\n}");
+    if (bShouldPrint)
+        printl(tData);
+    return tData;
 }
 
 // MISC
@@ -180,190 +220,79 @@ function DeepPrintTable(table)  // Backported and modified from l4d2 "sm_utiliti
     return Convars.GetBool("mp_flashlight");
 }
 
-::IsFreezeTimeEnded <- function()
+::IsFreezePeriod <- function()
 {   // Returns true if the round freeze period ends. You can do the same by hooking the event "round_freeze_end"
-    return NetProps.GetPropBool(GAMERULES_ENTITY, "m_bFreezePeriod");
+    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bFreezePeriod");
+}
+
+// To Comfirm: What's this? a leftlover
+// [WARNING]: 
+// - Setting this to true will literally hide the hud (not main menu) for everyone.
+// - You may not teleport back to the spawn in the next round.
+// - You will be completely frozen in the next round (camera&movement).
+// All of this if you don't set it back to false before the round resets.
+::IsLogoMap <- function() 
+{   // Returns true if the netprop is true i think.
+    return NetProps.GetPropBool(GetGamerules(), "m_bLogoMap");
+}
+
+// NOTES: It's the "Dynamic Weapon Pricing" feature from 2006 (https://counterstrike.fandom.com/wiki/Dynamic_Weapon_Pricing)
+// - It forces the startmoney to 800 regardless of "mp_startmoney" value.
+// - May or may not crash the game when opening the buy menu
+// - The buy menu gets buggy with the feature leftovers.
+// - The weapon prices remain the same.
+// - It's definitely a leftover netprop.
+// TIP: Keep this on false.
+::IsBlackMarket <- function() 
+{   // Returns true if the black market is enabled.
+    return NetProps.GetPropBool(GetGamerules(), "m_bBlackMarket");
 }
 
 ::IsGiftGrabEventActive <- function()
 {   // Returns true if the gift grab event is active.
-    return NetProps.GetPropBool(GAMERULES_ENTITY, "m_bWinterHolidayActive");
+    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bWinterHolidayActive");
 }
 
 ::SetForceGiftGrabEvent <- function(bool)
 {   // Forces or disables the Gift Grab event.
-    NetProps.SetPropBool(GAMERULES_ENTITY, "m_bWinterHolidayActive", bool);
+    NetProps.SetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bWinterHolidayActive", bool);
 }
 
 ::GetRoundDuration <- function()
 {   // Returns the round time in seconds.
-    return Time() - NetProps.GetPropFloat(GAMERULES_ENTITY, "m_iRoundTime");
+    return Time() - NetProps.GetPropFloat(Entities.FindByClassname(null, "cs_gamerules"), "m_iRoundTime");
 }
 
 ::GetRoundTime <- function()
 {   // Returns the duration of the current round
-    return Time() - NetProps.GetPropFloat(GAMERULES_ENTITY, "m_fRoundStartTime");
+    return Time() - NetProps.GetPropFloat(Entities.FindByClassname(null, "cs_gamerules"), "m_fRoundStartTime");
 }
 
 ::GetCompleteRoundTime <- function()
 {   // Returns the duration of the current round but it includes the freeze time.
-    return Time() - NetProps.GetPropFloat(GAMERULES_ENTITY, "m_flGameStartTime"); 
+    return Time() - NetProps.GetPropFloat(Entities.FindByClassname(null, "cs_gamerules"), "m_flGameStartTime"); 
 }
 
-::MapHasBombTarget <- function()
+::HasMapBombTarget <- function()
 {   // Returns true if the map has bomb target
-    return NetProps.GetPropBool(GAMERULES_ENTITY, "m_bMapHasBombTarget");
+    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bMapHasBombTarget");
 }
 
-::MapHasRescueZone <- function()
-{   // Returns true if the map has rescue zone
-    return NetProps.GetPropBool(GAMERULES_ENTITY, "m_bMapHasRescueZone");
+::HasMapRescueZone <- function()
+{   // Returns true if the map has rescue zone (aka. hostage)
+    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bMapHasRescueZone");
+}
+
+// NOTES: The netprop value isn't updated if 'mp_ignore_round_win_conditions' cvar is 1.
+// - Setting the cvar back to 0, the value will update the next time you rescue or kill a hostage.
+// - The value will always update before decreasing or increasing the count (in case you create more hostage_entity)
+// - The value isn't updated in real time. You may want to use a delay to get the real value.
+// Ex: The value is 4 > Set the netprop value wrongly to 1 > Kill or rescue one hostage > The value will be set to 3.
+// TIP: Don't change the value.
+::GetRemainingHostages <- function() 
+{   // Retuns the remaining hostages to be rescued or killed in the round.
+    return NetProps.GetPropInt(GetGamerules(), "m_iHostagesRemaining");
 }
 
 
-// RESTORED FUNCTIONS...?
-// UPDATE FUNCTION
-::UpdateUtil <- {
-    IsLoaded = false
-    UpdateEnt = null
-    FuncAmount = 0
-    UpdateGroup = [/*{func = (function : 0x000001EE46F6CA60) refire_interval = 1.0 timer = Time() is_disabled = false}*/]
-    Init = function()
-    {
-        if (UpdateUtil.IsLoaded)   // This function should be called once per map load.
-        {
-            error("[UpdateUtil] Init function can only be called once per map load\n");
-            return;
-        }
 
-        local main_entity = Ent("*_UpdateEntity_*");
-        if (!main_entity)
-        {
-            UpdateUtil.UpdateEnt = Entities.CreateByClassname("info_target");
-            UpdateUtil.UpdateEnt.KeyValueFromString("targetname", UniqueString("_UpdateEntity_"));
-            UpdateUtil.UpdateEnt.DispatchSpawn();
-        }
-        else 
-            UpdateUtil.UpdateEnt = main_entity;
-        
-        UpdateUtil.UpdateEnt.ValidateScriptScope();
-        UpdateUtil.UpdateEnt.GetScriptScope()["UpdateFunc"] <- function() 
-        {
-            UpdateUtil.UpdateFunc(); 
-            return -1;
-        };
-        AddThinkToEnt(UpdateUtil.UpdateEnt, "UpdateFunc");
-        UpdateUtil.IsLoaded = true;
-    }
-
-    UpdateFunc = function() 
-    {
-        foreach (idx, func in UpdateUtil.UpdateGroup) 
-        {
-            if (Time() - UpdateUtil.UpdateGroup[idx]["timer"] >= UpdateUtil.UpdateGroup[idx]["refire_interval"])
-            {
-                UpdateUtil.UpdateGroup[idx]["timer"] = Time();
-                if (!UpdateUtil.UpdateGroup[idx]["is_disabled"])
-                    UpdateUtil.UpdateGroup[idx]["func"]();
-            }
-        }
-    }
-
-    IsInUpdateGroup = function(func)
-    {   // NOTE: Re-defining the same funcion again counts as a different function object
-        for (local i = 0; i < UpdateUtil.UpdateGroup.len(); i++)
-        {
-            if (UpdateUtil.UpdateGroup[i]["func"] == func)
-                return UpdateUtil.UpdateGroup[i];
-        }
-        return null;
-    }
-
-    AddUpdate = function(func, interval = 1.0, start_disabled = false, is_preserved = false)  // I belive the lowest interval is 0.015 for 66 ticks.
-    { 
-        if (typeof func != "function")
-        {
-            error("[UpdateUtil] The parameter <func> must be a function type\n");
-            return;
-        }
-        else if (func.getinfos()["name"] == null)
-        {
-            error("[UpdateUtil] The function must have a name. Please.\n");
-            return;
-        }
-        if (UpdateUtil.IsInUpdateGroup(func) != null)
-        {
-            error("[UpdateUtil] The function " + func.getinfos()["name"] + " is already added!\n");
-            return false;
-        }
-
-        local new_table = 
-        {
-            func_id = UpdateUtil.FuncAmount
-            func_name = func.getinfos()["name"] 
-            func = func 
-            refire_interval = 
-            interval timer = Time() 
-            is_disabled = start_disabled
-            preserved = is_preserved    // The function will be removed in a new round
-        };
-        UpdateUtil.UpdateGroup.append(new_table);
-        printl("[UpdateUtils] function " + new_table.funcname + "() has been added successfully.");
-        UpdateUtil.FuncAmount++;
-        return true;
-    }
-
-    ToggleUpdate = function(func)
-    {
-        local bDidToggle = false;
-        for (local i = 0; i < UpdateUtil.UpdateGroup.len(); i++)
-        {
-            if (UpdateUtil.UpdateGroup[i]["func"] == func)
-            {
-                if (UpdateUtil.UpdateGroup[i]["is_disabled"])
-                {
-                    UpdateUtil.UpdateGroup[i]["is_disabled"] = false;
-                    printl("[UpdateUtil] Function " + UpdateUtil.UpdateGroup[i]["func_name"] + "() is ENABLED.");
-                }
-                else 
-                {
-                    UpdateUtil.UpdateGroup[i]["is_disabled"] = true;
-                    printl("[UpdateUtil] Function " + UpdateUtil.UpdateGroup[i]["func_name"] + "() is DISABLED.");
-                }    
-                bDidToggle = true;
-                break;
-            }
-        }
-        return bDidToggle;
-    }
-
-    RemoveUpdate = function(func)
-    {
-        local bDidRemove = false;
-        for (local i = 0; i < UpdateUtil.UpdateGroup.len(); i++)
-        {
-            if (UpdateUtil.UpdateGroup[i]["func"] == func)
-            {
-                printl("[UpdateUtil] Removing function " + UpdateUtil.UpdateGroup[i]["func_name"] + "()...");
-                UpdateUtil.UpdateGroup.remove(i);
-                bDidRemove = true;
-                break;
-            }
-        }
-        if (bDidRemove)
-            UpdateUtil.FuncAmount--;
-
-        return bDidRemove;
-    }
-/*
-    OnGameEvent_round_start = function(params) 
-    {
-        for (local i = 0; i < UpdateUtil.UpdateGroup.len(); i++)
-        {
-            if (!UpdateUtil.UpdateGroup[i]["preserved"])
-                UpdateUtil.UpdateGroup.remove(i);
-        }
-    }*/
-}
-__CollectGameEventCallbacks(UpdateUtil);
-UpdateUtil.Init();

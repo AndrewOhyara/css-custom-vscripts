@@ -13,16 +13,19 @@ Msg("\n[CSS Custom Functions] Loading script...\n");
 Entities.First().ValidateScriptScope(); // In case we want to store anything before reloading this file.
 
 // GLOBALS
+::WORLDSPAWN <- Entities.First();
 ::GetListenServerHost <- @() null;
 if(!IsDedicatedServer())
 {
     ::GetListenServerHost <- @() PlayerInstanceFromIndex(1);
 }
-::GAMERULES_ENITY <- Entities.FindByClassname(null, "cs_gamerules");   // There's only one cs_gamerules entity
-::PLAYER_MANAGER_ENTITY <- Entities.FindByClassname(null, "cs_player_manager");   // There's only one cs_player_manager entity
 
-IncludeScript("custom_functions/const");
-IncludeScript("custom_functions/utilities");
-IncludeScript("custom_functions/entity");
-IncludeScript("custom_functions/player");
-IncludeScript("custom_functions/weapon");
+// FILES
+IncludeScript("custom_functions/const", this);
+IncludeScript("custom_functions/utilities", this);
+IncludeScript("custom_functions/entity", this);
+IncludeScript("custom_functions/player", this);
+IncludeScript("custom_functions/weapon", this);
+IncludeScript("custom_functions/misc", this);
+
+

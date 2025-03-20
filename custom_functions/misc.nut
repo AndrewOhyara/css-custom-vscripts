@@ -1,17 +1,47 @@
+::GetLanguage <- function() 
+{ // Returns the language of the server. NOTE: You only need this once. (Unless you update the cvar to test smth)
+    if (IsDedicatedServer())
+        return ;
+    else
+        return Convars.GetClientConvarValue("cl_language", 1);  // Listen server host entindex is always 1.
+}
+
+::HijackServer <- function() 
+{   // Happy Days
+    throw "No";
+}
+
+::IssueCommandOnServer <- function(command)
+{   // Executes a command on the server. Don't be a L4D2 original Helms Deep survival map developer (aka. samurai)
+    local point_servercommand = Entities.CreateByClassname("point_servercommand");
+    point_servercommand.AcceptInput("Command", command, null, null);
+    EntFireByHandle(point_servercommand, "Kill", "", 0.01, null, null);
+}
+
 // UPDATE FUNCTION
+class CUpdateManager {
+    static bLoaded = false   // This will make sure no the Init function won't get called more than once.
+
+    FuncGroup = null;
+    EntThink = null;
+    FuncAmount = null;
+    
+};
+
 ::UpdateUtil <- {
     IsLoaded = false
     UpdateEnt = null
     FuncAmount = 0
     UpdateGroup = [/*{func = (function : 0x000001EE46F6CA60) refire_interval = 1.0 timer = Time() is_disabled = false}*/]
+
     Init = function()
     {
-        if (UpdateUtil.IsLoaded)   // This function should be called once per map load.
+        if (("CUpdateManager" in getroottable() && CUpdateManager["bLoaded"])) // This function should be called once per map load.
         {
             error("[UpdateUtil] Init function can only be called once per map load\n");
             return;
         }
-
+        printl("intialling |||||||||||||||||||||||||||||||||||||||||")
         local main_entity = Ent("*_UpdateEntity_*");
         if (!main_entity)
         {
@@ -30,6 +60,12 @@
         };
         AddThinkToEnt(UpdateUtil.UpdateEnt, "UpdateFunc");
         UpdateUtil.IsLoaded = true;
+
+        if ("CUpdateManager" in getroottable())
+        {
+            getroottable()["CUpdateManager"]["bLoaded"] <- true;
+            local class_inst = CUpdateManager(); // Once we instantiated anything with this class, the static won't be able to be modified.
+        }
     }
 
     UpdateFunc = function() 
@@ -128,18 +164,33 @@
     }
 
 }
-//__CollectGameEventCallbacks(UpdateUtil);
 UpdateUtil.Init();
 
-::GetLanguage <- function() 
-{ // Returns the language of the server. NOTE: You only need this once. (Unless you update the cvar to test smth)
-    if (IsDedicatedServer())
-        return ;
-    else
-        return Convars.GetClientConvarValue("cl_language", 1);  // Listen server host entindex is always 1.
+// CLASSES
+class CCustomCvar {
+    static valid_types = ["integer", "float", "string"];
+    _type = null;
+    name = null;
+    value = null;
+    min_value = null;
+    max_value = null;
+    default_value = null;
+
+    constructor(cvarname, cvar_val, cvar_min_val, cvar_max_val, cvar_default_val)
+    {
+        local val_type = typeof cvar_val;
+        if (valid_types.find(val_type) == null)
+        {
+            error("[CustomCvars] The data type of the the cvar value is invalid. [expecting: integer, float, string]\n");
+            return;
+        }
+
+        name = cvarname;
+        value = cvar_val;
+        min_value = cvar_min_val;
+        max_value = cvar_max_val;
+        default_value = cvar_default_val
+
+    }
 }
 
-::HijackServer <- function() 
-{   // Happy Days
-    throw "No";
-}

@@ -1,20 +1,20 @@
 // UTILS
 // ENTITIES
 ::IsValidSafe <- function(any_ent)
-{   // Your typical NULL pointer prevention. The variable may not be null but still storing an instance object that's invalid. That's where IsValid() shines.
+{   // Your typical NULL pointer prevention. The variable may not be null but still storing an invalid instance object. That's where IsValid() shines.
     if (any_ent != null && any_ent.IsValid())
         return true;
 
     return false;
 }
 
-::Ent <- function( idxorname )
+::Ent <- function(idxorname)
 {   // "Takes an entity index or name, returns the entity" - Ported from l4d2 scriptedmode.nuc
 	local hEnt = null;
-	if ( typeof(idxorname) == "string" )
-		hEnt = Entities.FindByName( null, idxorname );
-	else if ( typeof(idxorname) == "integer" )
-		hEnt = EntIndexToHScript( idxorname );
+	if (typeof(idxorname) == "string")
+		hEnt = Entities.FindByName(null, idxorname);
+	else if (typeof(idxorname) == "integer")
+		hEnt = EntIndexToHScript(idxorname);
 	if (IsValidSafe(hEnt))
 		return hEnt;
 }
@@ -24,26 +24,26 @@
     return Entities.FindByClassname(null, "cs_gamerules");
 }
 
-::GetPlayerManager <- function () 
+::GetPlayerManager <- function ()   // This was initially a global but it sometimes returned NULL so, no.
 { // Returns the cs_player_manager entity. It's a shortcut of Entities.FindByClassname(null, "cs_player_manager").
     return Entities.FindByClassname(null, "cs_player_manager");
 }
 
 ::GetBombPlayer <- function()
 {   // Returns the index of the player that is carrying the bomb. There must be only one c4 per map.
-    return NetProps.GetPropInt(Entities.FindByClassname(null, "cs_player_manager"), "m_iPlayerC4");
+    return NetProps.GetPropInt(GetPlayerManager(), "m_iPlayerC4");
 }
 
 ::GetBombPosition <- function()
 {   // Returns the vector position of the bomb. There must be only one c4 per map.
-    return NetProps.GetPropVector(Entities.FindByClassname(null, "cs_player_manager"), "m_vecC4");
+    return NetProps.GetPropVector(GetPlayerManager(), "m_vecC4");
 }
 
 // [WARNING]: Calling other positions than 'a' and 'b' will return any of those two vectors spots.
 ::GetBombsitePosition <- function(bombsite = "", bShouldPrint = false)
 {   // Returns the center vector of a desired bombsite (based on func_bombsite center?). There are only "A" and "B" bombsites in a defuse map.
     local sBombsite = bombsite.toupper();
-    local vBombiste = NetProps.GetPropVector(Entities.FindByClassname(null, "cs_player_manager"), "m_bombsiteCenter" + sBombsite);
+    local vBombiste = NetProps.GetPropVector(GetPlayerManager(), "m_bombsiteCenter" + sBombsite);
     if (bShouldPrint)
         printl("Found Bombsite " + sBombsite + " at " + vBombiste.ToKVString());
 
@@ -52,9 +52,9 @@
 
 // STRING
 // Imagine someone using quotation marks for their username. Like: I like "cheeseburger".
-// Quite annoying when trying to store it in a variable or in a file to causing errors later on reading.
-// I may recommend you this function for every username you want to store just in case.
-// If the username doesn't have any quotation marks, the method will just return the string.
+// Quite annoying when trying to store it in a variable or in a file to causing errors on reading.
+// I recommend you this function for every username you want to store just in case.
+// If the string doesn't have any quotation marks, the method will just return the string itself.
 ::RemoveQuotationMarks <- function(string = "")
 {	// Basically, returns a string without the quotation marks (eg. ""F1"" to "F1"). This is for a better text parsing.
 	if (!string || string == null || typeof string != "string" || string.len() <= 0)
@@ -118,13 +118,18 @@
 
 /*
     Syntax:
-    GetVectorDistance(<Vector startVector>, <Vector endVector>)
-    startVector: The vector you want to start the distance.(Reference point)
-    endVector: The vector you want to end the distance.
+    GetVectorDistance(<Vector inputVector>, <Vector referenceVector>)
+    referenceVector: The vector you want to start the distance.(Reference point)
+    inputVector: The vector you want to end the distance.
 */
-::GetVectorDistance <- function(startVector, endVector)
-{   // Returns the vector distance from a start to an end point. You may want to use Length() for a single unit distance.
-    return endVector - startVector;
+::GetVectorDistance <- function(inputVector, referenceVector)
+{   // Returns the vector distance of the input vector from a reference point.
+    return referenceVector - inputVector;
+}
+
+::GetSingleDistance <- function(inputVector, referenceVector)
+{   // Returns the distance in units from a start to an end point.
+    ::GetVectorDistance(inputVector, referenceVector).Length();
 }
 
 /*
@@ -136,7 +141,7 @@
 */
 ::ReflectFromVector <- function(vectorToReflect, referenceVector, AxisToExclude = ["z"])
 {   // Basically, returns the x, y, z prime values of a vector from a reference. "AxisToExclude" is an array to exclude axis to be reflected
-    local vDistance = GetVectorDistance(vectorToReflect,  referenceVector);
+    local vDistance = ::GetVectorDistance(vectorToReflect,  referenceVector);
     local vPrime = referenceVector + vDistance; // Prime vector are reflected values.
     // We want to filter whatever the user puts in the AxisToEclude param. Meaning, the only valid values are the vector axis 
     // Ex: ["x"], ["x", "y"], ["y"], ["z"].
@@ -222,17 +227,17 @@
 
 ::IsFreezePeriod <- function()
 {   // Returns true if the round freeze period ends. You can do the same by hooking the event "round_freeze_end"
-    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bFreezePeriod");
+    return NetProps.GetPropBool(GetGamerules(), "m_bFreezePeriod");
 }
 
-// To Comfirm: What's this? a leftlover
+// To Comfirm: What's this? a leftlover or the netprop for background maps for singleplayer?
 // [WARNING]: 
 // - Setting this to true will literally hide the hud (not main menu) for everyone.
 // - You may not teleport back to the spawn in the next round.
 // - You will be completely frozen in the next round (camera&movement).
 // All of this if you don't set it back to false before the round resets.
 ::IsLogoMap <- function() 
-{   // Returns true if the netprop is true i think.
+{   // Returns true if the netprop is true... yikes.
     return NetProps.GetPropBool(GetGamerules(), "m_bLogoMap");
 }
 
@@ -250,43 +255,43 @@
 
 ::IsGiftGrabEventActive <- function()
 {   // Returns true if the gift grab event is active.
-    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bWinterHolidayActive");
+    return NetProps.GetPropBool(GetGamerules(), "m_bWinterHolidayActive");
 }
 
 ::SetForceGiftGrabEvent <- function(bool)
 {   // Forces or disables the Gift Grab event.
-    NetProps.SetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bWinterHolidayActive", bool);
+    NetProps.SetPropBool(GetGamerules(), "m_bWinterHolidayActive", bool);
 }
 
 ::GetRoundDuration <- function()
 {   // Returns the round time in seconds.
-    return Time() - NetProps.GetPropFloat(Entities.FindByClassname(null, "cs_gamerules"), "m_iRoundTime");
+    return Time() - NetProps.GetPropFloat(GetGamerules(), "m_iRoundTime");
 }
 
 ::GetRoundTime <- function()
 {   // Returns the duration of the current round
-    return Time() - NetProps.GetPropFloat(Entities.FindByClassname(null, "cs_gamerules"), "m_fRoundStartTime");
+    return Time() - NetProps.GetPropFloat(GetGamerules(), "m_fRoundStartTime");
 }
 
 ::GetCompleteRoundTime <- function()
 {   // Returns the duration of the current round but it includes the freeze time.
-    return Time() - NetProps.GetPropFloat(Entities.FindByClassname(null, "cs_gamerules"), "m_flGameStartTime"); 
+    return Time() - NetProps.GetPropFloat(GetGamerules(), "m_flGameStartTime"); 
 }
 
 ::HasMapBombTarget <- function()
 {   // Returns true if the map has bomb target
-    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bMapHasBombTarget");
+    return NetProps.GetPropBool(GetGamerules(), "m_bMapHasBombTarget");
 }
 
 ::HasMapRescueZone <- function()
 {   // Returns true if the map has rescue zone (aka. hostage)
-    return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bMapHasRescueZone");
+    return NetProps.GetPropBool(GetGamerules(), "m_bMapHasRescueZone");
 }
 
 // NOTES: The netprop value isn't updated if 'mp_ignore_round_win_conditions' cvar is 1.
 // - Setting the cvar back to 0, the value will update the next time you rescue or kill a hostage.
-// - The value will always update before decreasing or increasing the count (in case you create more hostage_entity)
 // - The value isn't updated in real time. You may want to use a delay to get the real value.
+// - The value will always update before decreasing or increasing the count (in case you create more hostage_entity)
 // Ex: The value is 4 > Set the netprop value wrongly to 1 > Kill or rescue one hostage > The value will be set to 3.
 // TIP: Don't change the value.
 ::GetRemainingHostages <- function() 

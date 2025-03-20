@@ -8,6 +8,7 @@ To run any of those files, you can use script_execute <name_of_the_file> (Requir
 IncludeScript("name_of_the_file", getrootable());
 
 // Including it in a specific scope (ex. a table or an entity scope)
+// Your scope must exists before including any script file
 IncludeScript("name_of_the_file", your_scope)
 
 // EXAMPLE

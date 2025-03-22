@@ -1,7 +1,7 @@
 // Original source: https://developer.valvesoftware.com/wiki/Counter-Strike:_Source/Scripting/VScript_Examples#L4D2-like_muzzleflashes)
 // Requires the effects/muzzleflash_light texture from L4D2, or just use a plain white one and recolor it.
 // Reality: There's no need to import it. The projected light will still looking good.
-// Recommendation: Since the projected light exists for a moment, it still counts toward the network entity limit. 
+// Recommendation: Since the projected light exists for 0.01 seconds, it does still count toward the networking entity limit. 
 // So, i would recommend using this only for real players or maybe VIPs and admins.
 if ("MuzzleflashEvents" in this) 
     MuzzleflashEvents.clear();
@@ -10,12 +10,11 @@ MuzzleflashEvents <-
 {
 	OnGameEvent_weapon_fire = function(params)
 	{
-		if (params.weapon == "knife")
+		if (params.weapon == "knife" || params.weapon == "hegrenade" || params.weapon == "flashbang" || params.weapon == "smokegrenade")
 			return
 			
 		local player = GetPlayerFromUserID(params.userid);
 		local host = player == GetListenServerHost();
-
 
     	// Before creating the entity, we must make sure the player has the flashlight off.
     	// The flashlight is a projected texture itself, so the entity will not work properly

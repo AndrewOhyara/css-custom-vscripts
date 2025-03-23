@@ -5,6 +5,7 @@ if ("WAAachievement" in this)
 {
     bEnabled = true
     OppositeHostTeam = -1
+    // READ: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions#INextBotComponent:~:text=Calling-,RunScriptCode
     ClearStringFromPool =  function(string)
     {
         local dummy = Entities.CreateByClassname("info_target");
@@ -12,7 +13,7 @@ if ("WAAachievement" in this)
         NetProps.SetPropBool(dummy, "m_bForcePurgeFixedupStrings", true);
         dummy.Destroy();
     }
-
+    // READ: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions#INextBotComponent:~:text=Calling-,RunScriptCode
     EntFireCodeSafe =  function(entity, code, delay = 0.0, activator = null, caller = null)
     {
         EntFireByHandle(entity, "RunScriptCode", code, delay, activator, caller);

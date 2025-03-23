@@ -1,41 +1,53 @@
 if ("DissolveCorpse" in this)
-   DissolveCorpse.clear();
+    ::DissolveCorpse.clear();
 
-DissolveCorpse <- {
-   DissolveEntity = function(any, type = 0, magnitude = 0)
-   {
-      local ent = any;
-    if (typeof any == "integer")
-        ent = EntIndexToHScript(any);
-    else if (typeof ent != "instance")
-        return;
+::DissolveCorpse <- {
+    // READ: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions#INextBotComponent:~:text=Calling-,RunScriptCode
+    ClearStringFromPool = function(string)
+    {
+        local dummy = Entities.CreateByClassname("info_target");
+        dummy.KeyValueFromString("targetname", string);
+        NetProps.SetPropBool(dummy, "m_bForcePurgeFixedupStrings", true);
+        dummy.Destroy();
+    }
 
-    if (ent == Entities.First())
-        return;
+    // READ: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions#INextBotComponent:~:text=Calling-,RunScriptCode
+    EntFireCodeSafe = function(entity, code, delay = 0.0, activator = null, caller = null)
+    {
+        EntFireByHandle(entity, "RunScriptCode", code, delay, activator, caller);
+        ::DissolveCorpse.ClearStringFromPool(code);
+    }
 
-      local dissolver = Entities.CreateByClassname("env_entity_dissolver");
-      dissolver.KeyValueFromString("target", "!activator");
-      dissolver.KeyValueFromInt("dissolvetype", type);
-      dissolver.KeyValueFromInt("magnitude", type);
+    DissolveEntity = function(any, type = 0, magnitude = 0)
+    {
+        local ent = any;
+        if (typeof any == "integer")
+            ent = EntIndexToHScript(any);
+        else if (typeof ent != "instance")
+            return;
 
-      dissolver.DispatchSpawn();
+        if (ent == Entities.First())
+            return;
 
-      dissolver.AcceptInput("Dissolve", "", ent, null);
-      dissolver.AcceptInput("Kill", "", null, null);
-   }
+        local dissolver = Entities.CreateByClassname("env_entity_dissolver");
+        dissolver.KeyValueFromString("target", "!activator");
+        dissolver.KeyValueFromInt("dissolvetype", type);
+        dissolver.KeyValueFromInt("magnitude", type);
 
-   OnGameEvent_player_death = function(params)
-   {
-      local client = GetPlayerFromUserID(params["userid"]);
-      if (!client)
-         return;
+        dissolver.AcceptInput("Dissolve", "", ent, null);
+        dissolver.AcceptInput("Kill", "", null, null);
+    }
 
-      local ragdoll = NetProps.GetPropEntity(client, "m_hRagdoll");
-      if (ragdoll != null && ragdoll.IsValid())
-      {
-        EntFireByHandle(Entities.First(), "RunScriptCode", "DissolveCorpse.DissolveEntity("+ragdoll.entindex()+",0,1)", 1, null, null);
-      }
-   }
+    OnGameEvent_player_death = function(params)
+    {
+        local client = GetPlayerFromUserID(params["userid"]);
+        if (!client)
+            return;
+
+        local ragdoll = NetProps.GetPropEntity(client, "m_hRagdoll");
+        if (ragdoll != null && ragdoll.IsValid())
+            EntFireCodeSafe(Entities.First(), "DissolveCorpse.DissolveEntity("+ragdoll.entindex()+",0,1)", 1, null, null);
+    }
 }
 __CollectGameEventCallbacks(DissolveCorpse);
 
@@ -50,8 +62,8 @@ m_Events <-
     {
         local ply = GetPlayerFromUserID(d.userid)
         local weapon = NetProps.GetPropEntity(ply, "m_hActiveWeapon")
-
-        if(weapon && weapon.IsValid() && ply && ply.IsValid() && !IsPlayerABot(ply))
+        // Shotguns fire more than one bullet per shot.
+        if (weapon && weapon.IsValid() && ply && ply.IsValid() && !IsPlayerABot(ply) && weapon.GetClassname() != "weapon_m3" && weapon.GetClassname() != "weapon_xm1014")
         {
             local targetStart = SpawnEntityFromTable("info_target", {
                 targetname = UniqueString()
@@ -72,7 +84,6 @@ m_Events <-
             })
 
             EntFireByHandle(beam, "Kill", "", 0, null, null)
-
             EntFireByHandle(targetStart, "Kill", "", 0.01, null, null)
             EntFireByHandle(targetEnd, "Kill", "", 0.01, null, null)
         }

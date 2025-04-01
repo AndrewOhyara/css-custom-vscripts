@@ -18,7 +18,7 @@ if ("DissolveCorpse" in this)
         ::DissolveCorpse.ClearStringFromPool(code);
     }
 
-    DissolveEntity = function(any, type = 0, magnitude = 0)
+    DissolveEntity = function(any, type = 0)
     {
         local ent = any;
         if (typeof any == "integer")
@@ -30,12 +30,11 @@ if ("DissolveCorpse" in this)
             return;
 
         local dissolver = Entities.CreateByClassname("env_entity_dissolver");
+        dissolver.DispatchSpawn();
         dissolver.KeyValueFromString("target", "!activator");
         dissolver.KeyValueFromInt("dissolvetype", type);
-        dissolver.KeyValueFromInt("magnitude", type);
-
         dissolver.AcceptInput("Dissolve", "", ent, null);
-        dissolver.AcceptInput("Kill", "", null, null);
+        dissolver.Kill();
     }
 
     OnGameEvent_player_death = function(params)
@@ -46,23 +45,23 @@ if ("DissolveCorpse" in this)
 
         local ragdoll = NetProps.GetPropEntity(client, "m_hRagdoll");
         if (ragdoll != null && ragdoll.IsValid())
-            EntFireCodeSafe(Entities.First(), "DissolveCorpse.DissolveEntity("+ragdoll.entindex()+",0,1)", 1, null, null);
+            EntFireCodeSafe(Entities.First(), "DissolveCorpse.DissolveEntity("+ragdoll.entindex()+",0)", 1, null, null);
     }
 }
 __CollectGameEventCallbacks(DissolveCorpse);
 
 
 // Code modified from: https://developer.valvesoftware.com/wiki/Counter-Strike:_Source/Scripting/VScript_Examples#Bullet_Tracers_for_AK47
-if("m_Events" in this) 
-    m_Events.clear()
+if("BulletTracers" in this) 
+    ::BulletTracers.clear();
 
-m_Events <-
+::BulletTracers <-
 {
     function OnGameEvent_bullet_impact(d)
     {
         local ply = GetPlayerFromUserID(d.userid)
         local weapon = NetProps.GetPropEntity(ply, "m_hActiveWeapon")
-        // Shotguns fire more than one bullet per shot.
+        // Shotguns fire more than one bullet per shot. Imagine if 60 players shoot a shotgun at the same time. That would be like 300-500 ents in the same frame.
         if (weapon && weapon.IsValid() && ply && ply.IsValid() && !IsPlayerABot(ply) && weapon.GetClassname() != "weapon_m3" && weapon.GetClassname() != "weapon_xm1014")
         {
             local targetStart = SpawnEntityFromTable("info_target", {
@@ -89,4 +88,4 @@ m_Events <-
         }
     }
 }
-__CollectGameEventCallbacks(m_Events);
+__CollectGameEventCallbacks(::BulletTracers);

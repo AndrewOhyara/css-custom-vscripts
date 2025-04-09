@@ -62,9 +62,9 @@ The config file should look like this (The comment lines aren't included):
   // If you want to add a connected player in the server, use the command !mj_save_client <the user id of the player>
   // Or copy the table and replace the steam id of whoever you want.
   // The safe limit of how many users you can add is 75. This is due the limitation of vscript at reading files.
-  Users=
+  Users =
   {
-    "[U:1:216118329]":  // The steam id of the player.
+    "[U:1:216118329]" :  // The steam id of the player.
     {
       DisabledByAdmin = false  // True if the host used the command !mj_client_toggle
       JumpForce = 300

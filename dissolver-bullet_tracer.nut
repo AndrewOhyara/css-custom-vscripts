@@ -30,7 +30,7 @@ if ("DissolveCorpse" in this)
             return;
 
         local dissolver = Entities.CreateByClassname("env_entity_dissolver");
-        dissolver.DispatchSpawn();
+        NetProps.SetPropBool(dissolver, "m_bForcePurgeFixedupStrings", true)
         dissolver.KeyValueFromString("target", "!activator");
         dissolver.KeyValueFromInt("dissolvetype", type);
         dissolver.AcceptInput("Dissolve", "", ent, null);
@@ -81,6 +81,13 @@ if("BulletTracers" in this)
                 texture = "sprites/laserbeam.spr"
                 spawnflags = 1
             })
+
+            // when entity is created new string are placed into game string table which has a limit, if it is exceeded, the game crashes
+			// in our case, where we create an entity, every time the bullet_impact event is fired, this table is filled with new strings
+			// m_bForcePurgeFixedupStrings netprop will help you avoid this
+			NetProps.SetPropBool(targetStart, "m_bForcePurgeFixedupStrings", true)
+			NetProps.SetPropBool(targetEnd, "m_bForcePurgeFixedupStrings", true)
+			NetProps.SetPropBool(beam, "m_bForcePurgeFixedupStrings", true)
 
             EntFireByHandle(beam, "Kill", "", 0, null, null)
             EntFireByHandle(targetStart, "Kill", "", 0.01, null, null)

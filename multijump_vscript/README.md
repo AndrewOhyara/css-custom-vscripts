@@ -60,6 +60,7 @@ The config file should look like this (The comment lines aren't included):
   // This tables stores specific players by their steamid. The format is the STEAMID3.
   // You may want to use any steamidfinder website to add new clients anytime.
   // If you want to add a connected player in the server, use the command !mj_save_client <the user id of the player>
+  // Or copy the table and replace the steam id of whoever you want.
   // The safe limit of how many users you can add is 75. This is due the limitation of vscript at reading files.
   Users=
   {

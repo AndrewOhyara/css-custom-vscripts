@@ -101,25 +101,25 @@ Type "!" or "/" and then the name of the command.
 Some commands require parameters. Example: !mj_jumplimit 100 | !mj_remove_saved_client [U:1:216118329]
 
 - ### Client Commands
-  - mj_multijump - Enable/Disable the multijump for yourself.
-  - mj_tf2mode - Enable/Disable TF2 Scout jump mode.
-  - mj_falldamage - Enable/Disable the falldamage for yourself.
-  - mj_airstop - Enable/Disable the stopping of the air speed if you are not pressing any WASD buttons.
-  - mj_jumplimit |number| - How many jumps can you do in air.
-  - mj_jumpforce |number| - The force of the jump in the air.
-  - mj_tf2_sideforce |number| - The force of the side jump in air for TF2 Scout jump mode.
-  - mj_configs - Print your current configs in console.
+  - !mj_multijump - Enable/Disable the multijump for yourself.
+  - !mj_tf2mode - Enable/Disable TF2 Scout jump mode.
+  - !mj_falldamage - Enable/Disable the falldamage for yourself.
+  - !mj_airstop - Enable/Disable the stopping of the air speed if you are not pressing any WASD buttons.
+  - !mj_jumplimit |number| - How many jumps can you do in air.
+  - !mj_jumpforce |number| - The force of the jump in the air.
+  - !mj_tf2_sideforce |number| - The force of the side jump in air for TF2 Scout jump mode.
+  - !mj_configs - Print your current configs in console.
 
 - ### Host commands
-  - mj_print_clients - Print the configs of all clients in the console.
-  - mj_script_toggle - Enable/Disable the script for the server.
-  - mj_autoadd_clients - Enable/Disable the auto add of new connected clients to the temporal client table.
-  - mj_client_can_config - Enable/Disable the ability of the clients to modify their own configs.
-  - mj_client_toggle |userid| <save_changes: true | false> - Enable or disable the jump ability of a connected client.
-  - mj_add_temporal_client |userid| - Adds a client in the temporal client table. It's not stored in the Users table.
-  - mj_save_client |userid| - Saves a connected client in the config file.
-  - mj_remove_saved_client |steamid3| - Removes a client by the steamid3 from the Users table.
-  - mj_debug - Enable/Disable the debug mode for the server.
-  - mj_reload_configs - Reloads the config file.
+  - !mj_print_clients - Print the configs of all clients in the console.
+  - !mj_script_toggle - Enable/Disable the script for the server.
+  - !mj_autoadd_clients - Enable/Disable the auto add of new connected clients to the temporal client table.
+  - !mj_client_can_config - Enable/Disable the ability of the clients to modify their own configs.
+  - !mj_client_toggle |userid| <save_changes: true | false> - Enable or disable the jump ability of a connected client.
+  - !mj_add_temporal_client |userid| - Adds a client in the temporal client table. It's not stored in the Users table.
+  - !mj_save_client |userid| - Saves a connected client in the config file.
+  - !mj_remove_saved_client |steamid3| - Removes a client by the steamid3 from the Users table.
+  - !mj_debug - Enable/Disable the debug mode for the server.
+  - !mj_reload_configs - Reloads the config file.
   
 

@@ -95,7 +95,7 @@ The config file should look like this (The comment lines aren't included):
 ## In-game chat commands
 You can customize the addon without opening the config file (unless it's a replicated config such as "JumpForce").
 
-There are commands for clients and for the host.
+There are commands for clients and the host.
 
 Type "!" or "/" and then the name of the command. 
 

@@ -30,7 +30,7 @@ if ("DissolveCorpse" in this)
             return;
 
         local dissolver = Entities.CreateByClassname("env_entity_dissolver");
-        NetProps.SetPropBool(dissolver, "m_bForcePurgeFixedupStrings", true)
+        NetProps.SetPropBool(dissolver, "m_bForcePurgeFixedupStrings", true);
         dissolver.KeyValueFromString("target", "!activator");
         dissolver.KeyValueFromInt("dissolvetype", type);
         dissolver.AcceptInput("Dissolve", "", ent, null);

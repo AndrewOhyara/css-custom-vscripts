@@ -57,6 +57,10 @@ The config file should look like this (The comment lines aren't included):
   // Changes are saved in this file if the steamid of the player is stored in the Users table
   CanClientsChangeConfigs = true
 
+  // Enable/Disable the ability of Enable/Disable the ability of clients to jump while surfing.
+  // They can still jumping in air if they won't land in a surf ramp.
+  AllowJumpOnSurfing = false
+
   // This tables stores specific players by their steamid. The format is the STEAMID3.
   // You may want to use any steamidfinder website to add new clients anytime.
   // If you want to add a connected player in the server, use the command !mj_save_client <the user id of the player>
@@ -91,6 +95,7 @@ The config file should look like this (The comment lines aren't included):
   ThinkInterval = -1
 } 
 ```
+NOTE: You can copy this code and paste it to your own config file but make sure to remove the commented lines to avoid reaching the read limit (16384 bytes)
 
 ## In-game chat commands
 You can customize the addon without opening the config file (unless it's a replicated config such as "JumpForce").
@@ -113,8 +118,10 @@ Some commands require parameters. Example: !mj_jumplimit 100 | !mj_remove_saved_
 
 - ### Host commands
   - !mj_print_clients - Print the configs of all clients in the console.
+  - !mj_print_configs - Print the config file of the server.
   - !mj_script_toggle - Enable/Disable the script in the server.
   - !mj_autoadd_clients - Enable/Disable the auto add of new connected clients to the temporal client table.
+  - !mj_allow_jump_on_surf - Enable/Disable the ability of clients to jump while surfing.
   - !mj_client_can_config - Enable/Disable the ability of the clients to modify their own configs.
   - !mj_client_toggle |userid| <save_changes: true | false> - Enable/Disable the jump ability of a connected client.
   - !mj_add_temporal_client |userid| - Adds a client in the temporal client table. It's not stored in the Users table.

@@ -9,8 +9,9 @@ This script also generates a config file which you can customize. And chat comma
 - [In-Game chat commands](#in-game-chat-commands)
 
 ## Installation
-1. Download the file "multijump.nut".
+1. [Download the file "multijump.nut".](https://github.com/AndrewOhyara/css-custom-vscripts/blob/main/multijump_vscript/multijump.nut)
 2. Move the file to the game folder at: <game_folder>/cstrike/scripts/vscripts 
+  - For steam: Steam > Library > Counter-Strike: Source > Manage > Browse local files
 3. Open the "mapspawn.nut" file and add this line:
 ```squirrel
 IncludeScript("multijump", this);

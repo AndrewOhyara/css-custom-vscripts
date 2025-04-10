@@ -16,12 +16,13 @@ if ("MultiJump" in this)
         JumpLimit = 1
         JumpForce = 300
         TF2mode = false
-        TF2sideForce = 265
+        TF2sideForce = 260
         DoAirStop = false
         ThinkInterval = -1
         FallDamage = false
         CanClientsChangeConfigs = true
-        AnnouncementInterval = 150
+        AnnouncementInterval = 180
+        AllowJumpOnSurfing = false
         DebugJumps = false
         Users = {}
     }
@@ -272,8 +273,20 @@ if ("MultiJump" in this)
             case "tf2jump_forward":
                 msg = "TF2 MODE FORWARD";
                 break;
-            case "tf2jump_backwards":
-                msg = "TF2 MODE BACKWARDS";
+            case "tf2jump_forward_left":
+                msg = "TF2 MODE FORWARD LEFT"
+                break;
+            case "tf2jump_forward_right":
+                msg = "TF2 MODE FORWARD RIGHT";
+                break;
+            case "tf2jump_backward":
+                msg = "TF2 MODE BACKWARD";
+                break;
+            case "tf2jump_backward_left":
+                msg = "TF2 MODE BACKWARD LEFT"
+                break;
+            case "tf2jump_backward_right":
+                msg = "TF2 MODE BACKWARD RIGHT";
                 break;
             case "tf2jump_left":
                 msg = "TF2 MODE LEFT";
@@ -304,12 +317,13 @@ if ("MultiJump" in this)
         if (IsValidSafe(::MultiJump.ThinkEnt))
             return;
 
-        local entname = "_double_jump_manager_" + GetFrameCount().tostring();
+        local entname = "_double_jump_manager_";
         local ent = Entities.FindByName(null, entname);
         if (!IsValidSafe(ent))
         {
             // We don't need a perserved entity. And in case the script is disabled by the server or the host, the entity won't "auto-spawn" again.
             ent = SpawnEntityFromTable("logic_script", {targetname = entname});
+            NetProps.SetPropBool(ent, "m_bForcePurgeFixedupStrings", true);
             ent.ValidateScriptScope();
             ent.GetScriptScope()["LastSetDebugTime"] <- Time();
             ent.GetScriptScope()["LastAnnouncementTime"] <- Time();
@@ -347,29 +361,31 @@ if ("MultiJump" in this)
                         {
                             if (cTable[steamid]["TimesJumped"] < cTable[steamid]["JumpLimit"])
                             {
-                                ::MultiJump.DoJumpOnClient(client, cTable[steamid]["JumpForce"], cTable[steamid]["TF2sideForce"], cTable[steamid]["TF2mode"], cTable[steamid]["DoAirStop"]);
-                                if (::MultiJump.Configs.DebugJumps)
+                                if (::MultiJump.DoJumpOnClient(client, cTable[steamid]["JumpForce"], cTable[steamid]["TF2sideForce"], cTable[steamid]["TF2mode"], cTable[steamid]["DoAirStop"]))
                                 {
-                                    EmitSoundOnClient("Bot.StuckSound", client);
-                                    local ijumps = cTable[steamid]["TimesJumped"] + 1;
-                                    ClientPrint(client, 4, "["+Time()+"] DOING JUMP | INTERVAL : " + (Time() - cTable[steamid]["LastGroundTime"]) + " | JUMPS MADE: " + ijumps + " | JUMP LIMIT " + cTable[steamid]["JumpLimit"]);
+                                    if (::MultiJump.Configs.DebugJumps)
+                                    {
+                                        EmitSoundOnClient("Bot.StuckSound", client);
+                                        local ijumps = cTable[steamid]["TimesJumped"] + 1;
+                                        ClientPrint(client, 4, "["+Time()+"] DOING JUMP | INTERVAL : " + (Time() - cTable[steamid]["LastGroundTime"]) + " | JUMPS MADE: " + ijumps + " | JUMP LIMIT " + cTable[steamid]["JumpLimit"]);
+                                    }
                                 }
                             }
                             cTable[steamid]["TimesJumped"]++;
                             cTable[steamid]["DidJump"] = true;
                             LastSetDebugTime = Time() + 2.3;
                         }
+                        if (is_on_ground > 0)
+                        {   // This make it up for those frames the event hooks cannot cover.
+                            cTable[steamid]["LastGroundTime"] = Time();
+                            cTable[steamid]["TimesJumped"] = 0;
+                            cTable[steamid]["DidJump"] = false;
+                        }
                         if (Time() - LastSetDebugTime >= 0.1 && (!cTable[steamid]["DidJump"] && ::MultiJump.Configs.DebugJumps))
                         {
                             LastSetDebugTime = Time();
                             ClientPrint(client, 4, "VELOCITY " + client.GetAbsVelocity().Length());
                         }
-                    }
-                    if (is_on_ground > 0)
-                    {   // This make it up for those frames the event hooks cannot cover.
-                        cTable[steamid]["LastGroundTime"] = Time();
-                        cTable[steamid]["TimesJumped"] = 0;
-                        cTable[steamid]["DidJump"] = false;
                     }
                     cTable[steamid]["LastButton"] = buttons;
                 }
@@ -379,6 +395,7 @@ if ("MultiJump" in this)
             ::MultiJump.ThinkEnt = ent;
         }
         ::MultiJump.ManageConfigs();
+        Msg("[MultiJump Vscript] Initializing script...\n");
     }
 
     IsOnGround = function(client)
@@ -389,6 +406,29 @@ if ("MultiJump" in this)
     IsFreezePeriod = function()
     {   // Players can still jumping if they spam the jump button enough between round_end and round_start. This statement will make sure to not let them do that.
         return NetProps.GetPropBool(Entities.FindByClassname(null, "cs_gamerules"), "m_bFreezePeriod");
+    }
+
+    IsLandingOnASurfRamp = function(client)
+    {   // Checks if the player will land on a surf ramp. Credits: https://forums.alliedmods.net/showpost.php?p=2575175&postcount=3
+        if (!IsValidSafe(client) || !client.IsPlayer())
+            return;
+
+        local vector_end = client.GetOrigin();
+        vector_end["z"] -= 999999.0; // So down! But it will always go downwards anyway
+        local trace =
+        {
+            start   = client.GetOrigin()
+            end     = vector_end
+            hullmin = client.GetPlayerMins() // same box size as player
+            hullmax = client.GetPlayerMaxs()
+            ignore  = client // don't hit ourselves
+            mask    = 81931 // MASK_PLAYERSOLID_BRUSHONLY
+        }
+        TraceHull(trace);
+        if (!trace.hit || trace.plane_normal["z"] > 0.7)
+            return;
+
+        return true;
     }
 
     GetSteamID = function(client)
@@ -514,60 +554,102 @@ if ("MultiJump" in this)
 
     DoJumpOnClient = function(client, jump_height = 0, front_velocity = 0, tf2_jump = false, stop_in_air = false)
     {
-        if (!IsValidSafe(client) || !client.IsPlayer())
+        if (!IsValidSafe(client) || !client.IsPlayer() || (!::MultiJump.Configs.AllowJumpOnSurfing && IsLandingOnASurfRamp(client)))
             return;
 
+        local velocity_final = Vector(0, 0, 0);
         local wasd_table = GetWASDbuttons(client);
         local vector_velocity = client.GetAbsVelocity();
         vector_velocity["z"] = jump_height;
 
         // Calculating velocity for tf2 mode.
-        local vector_forward = client.GetAbsAngles().Forward();
+        local angles = client.GetAbsAngles();
+        local vector_forward = angles.Forward();
         vector_forward["x"] *= front_velocity;
         vector_forward["y"] *= front_velocity;
         vector_forward["z"] = jump_height;
 
-        local vector_left = (client.GetAbsAngles().Left() * -1); // Left() returns right for some reason.
+        local vector_left = (angles.Left() * -1); // Left() returns right for some reason.
         vector_left["x"] *= front_velocity;
         vector_left["y"] *= front_velocity;
         vector_left["z"] = jump_height;
 
-        if (wasd_table["w"] > 0 && wasd_table["s"] == 0 && tf2_jump)
+        local overriden = false;
+
+        if (tf2_jump && wasd_table["w"] > 0 && wasd_table["s"] == 0)
         {
-            client.SetAbsVelocity(vector_forward);
-            ::MultiJump.DebugPrint(client, "tf2jump_forward", vector_forward);
+            velocity_final = vector_forward;
+            if (wasd_table["a"] > 0 && wasd_table["d"] == 0)
+            {     
+                velocity_final = RotateOrientation(angles, QAngle(0, 45, 0)).Forward();
+                velocity_final["x"] *= front_velocity;
+                velocity_final["y"] *= front_velocity;
+                ::MultiJump.DebugPrint(client, "tf2jump_forward_left", vector_forward);
+                overriden = true;
+            }
+            else if (wasd_table["d"] > 0 && wasd_table["a"] == 0)
+            {
+                velocity_final = RotateOrientation(angles, QAngle(0, -45, 0)).Forward();
+                velocity_final["x"] *= front_velocity;
+                velocity_final["y"] *= front_velocity;
+                ::MultiJump.DebugPrint(client, "tf2jump_forward_right", vector_forward);
+                overriden = true;
+            }
+            velocity_final["z"] = jump_height;
+            if (!overriden)
+                ::MultiJump.DebugPrint(client, "tf2jump_forward", vector_forward);
         }
-        else if (wasd_table["s"] > 0 && wasd_table["w"] == 0 && tf2_jump)
+        else if (tf2_jump && wasd_table["s"] > 0 && wasd_table["w"] == 0)
         {
             vector_forward["x"] *= -1;
             vector_forward["y"] *= -1;
-            client.SetAbsVelocity(vector_forward);
-            ::MultiJump.DebugPrint(client, "tf2jump_backwards", vector_forward);
+            velocity_final = vector_forward;
+            if (wasd_table["a"] > 0 && wasd_table["d"] == 0)
+            {   
+                velocity_final = RotateOrientation(angles, QAngle(0, 135, 0)).Forward();
+                velocity_final["x"] *= front_velocity;
+                velocity_final["y"] *= front_velocity;
+                ::MultiJump.DebugPrint(client, "tf2jump_backward_left", vector_forward);
+                overriden = true;
+            }
+            else if (wasd_table["d"] > 0 && wasd_table["a"] == 0)
+            {
+                velocity_final = RotateOrientation(angles, QAngle(0, -135, 0)).Forward();
+                velocity_final["x"] *= front_velocity;
+                velocity_final["y"] *= front_velocity;
+                ::MultiJump.DebugPrint(client, "tf2jump_backward_right", vector_forward);
+                overriden = true;
+            }
+            velocity_final["z"] = jump_height;
+            if (!overriden)
+                ::MultiJump.DebugPrint(client, "tf2jump_backward", vector_forward);
         }
-            else if (wasd_table["a"] > 0 && wasd_table["d"] == 0 && tf2_jump)
+        else if (tf2_jump && wasd_table["a"] > 0 && wasd_table["d"] == 0)
         {
-                client.SetAbsVelocity(vector_left);
-                ::MultiJump.DebugPrint(client, "tf2jump_left", vector_left);
+            velocity_final = vector_left;
+            ::MultiJump.DebugPrint(client, "tf2jump_left", vector_left);
         }
-        else if (wasd_table["d"] > 0 && wasd_table["a"] == 0 && tf2_jump)
+        else if (tf2_jump && wasd_table["d"] > 0 && wasd_table["a"] == 0)
         {
             vector_left["x"] *= -1;
             vector_left["y"] *= -1;
-            client.SetAbsVelocity(vector_left);
+            velocity_final = vector_left;
             ::MultiJump.DebugPrint(client, "tf2jump_right", vector_left);
         }
         else if (stop_in_air && (wasd_table["w"] + wasd_table["s"] + wasd_table["a"] + wasd_table["d"]) <= 0)
         {   // The scout stops any passive velocity if the player isn't pressing any WASD buttons
             vector_velocity["x"] = 0;
             vector_velocity["y"] = 0;
-            client.SetAbsVelocity(vector_velocity);
+            velocity_final = vector_velocity;
             ::MultiJump.DebugPrint(client, "tf2jump_stop_air", vector_velocity);
         }
         else
         {
-            client.SetAbsVelocity(vector_velocity);
+            velocity_final = vector_velocity;
             ::MultiJump.DebugPrint(client, "jump_normal_script", vector_velocity);
         }
+        client.SetAbsVelocity(velocity_final);
+        return true;
     }
 
     OnGameEvent_round_start = function(params)
@@ -636,14 +718,14 @@ if ("MultiJump" in this)
                         case "mj_help":
                             ClientPrint(client, 3, "\x04" + "[MultiJump Vscript] " + "\x07E0E0E0" + "See the console...");
                             ClientPrint(client, 2, "====== CLIENT COMMANDS ======");
-                            ClientPrint(client, 2, "mj_configs - Print your configs in console.");
-                            ClientPrint(client, 2, "mj_multijump - Enable or disable multijump.");
-                            ClientPrint(client, 2, "mj_tf2mode - Enable or disable TF2 Scout jump mode");
-                            ClientPrint(client, 2, "mj_falldamage - Enable or disable the falldamage.");
-                            ClientPrint(client, 2, "mj_airstop - Enable or disable the TF2 airstop if you aren't pressing any WASD buttons when doing the airjump.");
-                            ClientPrint(client, 2, "mj_jumplimit <number> - How many jumps you can do in air.");
-                            ClientPrint(client, 2, "mj_jumpforce <number> - The force of the jump in the air.");
-                            ClientPrint(client, 2, "mj_tf2_sideforce <number> - The force of the side jump in air for TF2 Scout jump mode.");
+                            ClientPrint(client, 2, "!mj_configs - Print your configs in console.");
+                            ClientPrint(client, 2, "!mj_multijump - Enable/Disable the multijump for yourself.");
+                            ClientPrint(client, 2, "!mj_tf2mode - Enable/Disable TF2 Scout jump mode.");
+                            ClientPrint(client, 2, "!mj_falldamage - Enable/Disable the falldamage for yourself.");
+                            ClientPrint(client, 2, "!mj_airstop - Enable/Disable the stopping of the air speed if you are not pressing any WASD buttons.");
+                            ClientPrint(client, 2, "!mj_jumplimit <number> - How many jumps can you do in air.");
+                            ClientPrint(client, 2, "!mj_jumpforce <number> - The force of the jump in the air.");
+                            ClientPrint(client, 2, "!mj_tf2_sideforce <number> - The force of the side jump in air for TF2 Scout jump mode.");
                             break;
                         case "mj_configs":
                             ClientPrint(client, 3, "\x04" + "[MultiJump Vscript] " + "\x07E0E0E0" + "See the console...");
@@ -769,16 +851,18 @@ if ("MultiJump" in this)
                 {
                     case "mj_help":
                         ClientPrint(client, 2, "=== ADMIN COMMANDS ===");
-                        ClientPrint(client, 2, "mj_print_clients - Print the configs of all clients in the console.");
-                        ClientPrint(client, 2, "mj_script_toggle - Enable or disable the script for the server.");
-                        ClientPrint(client, 2, "mj_autoadd_clients - Enable or disable the auto add of new connected clients (It's not stored in the config file).");
-                        ClientPrint(client, 2, "mj_client_can_config - Enable or disable the ability of the clients to modify their own configs.");
-                        ClientPrint(client, 2, "mj_client_toggle <userid> <save_changes: true | false. Default: false> - Enable or disable the jump ability of a connected client.");
-                        ClientPrint(client, 2, "mj_add_temporal_client <userid> - Adds a temporal client in the client table. It's not stored in the config file.");
-                        ClientPrint(client, 2, "mj_save_client <userid> - Saves a connected client in the config file.");
-                        ClientPrint(client, 2, "mj_remove_saved_client <steamid3> - Removes a client by the steamid3 from the config file.");
-                        ClientPrint(client, 2, "mj_debug - Enable or disable the debug mode for the server.");
-                        ClientPrint(client, 2, "mj_reload_configs - Reloads the config file.");
+                        ClientPrint(client, 2, "!mj_print_clients - Print the configs of all clients in the console.");
+                        ClientPrint(client, 2, "!mj_print_configs - Print the config file of the server.");
+                        ClientPrint(client, 2, "!mj_script_toggle - Enable/Disable the script in the server.");
+                        ClientPrint(client, 2, "!mj_autoadd_clients - Enable/Disable the auto add of new connected clients to the temporal client table.");
+                        ClientPrint(client, 2, "!mj_allow_jump_on_surf - Enable/Disable the ability of clients to jump while surfing.");
+                        ClientPrint(client, 2, "!mj_client_can_config - Enable/Disable the ability of the clients to modify their own configs.");
+                        ClientPrint(client, 2, "!mj_client_toggle <userid> <save_changes: true | false> - Enable/Disable the jump ability of a connected client.");
+                        ClientPrint(client, 2, "!mj_add_temporal_client <userid> - Adds a client in the temporal client table. It's not stored in the Users table.");
+                        ClientPrint(client, 2, "!mj_save_client <userid> - Saves a connected client in the config file.");
+                        ClientPrint(client, 2, "!mj_remove_saved_client <steamid3> - Removes a client by the steamid3 from the Users table.");
+                        ClientPrint(client, 2, "!mj_debug - Enable/Disable the debug mode in the server.");
+                        ClientPrint(client, 2, "!mj_reload_configs - Reloads the config file.");
                         break;
                     case "mj_print_clients":
                         ClientPrint(client, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "See the console...");
@@ -807,7 +891,15 @@ if ("MultiJump" in this)
                             }
                         }
                         candosave = true;
-                        ClientPrint(client, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "Script enabled set to " + ::MultiJump.Configs["EnableScript"] + ".");
+                        ClientPrint(null, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "Script enabled status set to " + ::MultiJump.Configs["EnableScript"] + ".");
+                        break;
+                    case "mj_allow_jump_on_surf":
+                        if (!::MultiJump.Configs["AllowJumpOnSurfing"])
+                            ::MultiJump.Configs["AllowJumpOnSurfing"] = true;
+                        else 
+                            ::MultiJump.Configs["AllowJumpOnSurfing"] = false;
+                        candosave = true;
+                        ClientPrint(null, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "AllowJumpOnSurfing set to " + ::MultiJump.Configs["AllowJumpOnSurfing"] + ".");
                         break;
                     case "mj_autoadd_clients":
                         if (!::MultiJump.Configs["AutoAddClients"])
@@ -816,7 +908,7 @@ if ("MultiJump" in this)
                             ::MultiJump.Configs["AutoAddClients"] = false;
 
                         candosave = true;
-                        ClientPrint(client, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "\"AutoAddClients\" set to " + ::MultiJump.Configs["AutoAddClients"] + ".");
+                        ClientPrint(null, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "AutoAddClients set to " + ::MultiJump.Configs["AutoAddClients"] + ".");
                         break;
                     case "mj_client_can_config":
                         if (!::MultiJump.Configs["CanClientsChangeConfigs"])
@@ -825,7 +917,7 @@ if ("MultiJump" in this)
                             ::MultiJump.Configs["CanClientsChangeConfigs"] = false;
 
                         candosave = true;
-                        ClientPrint(client, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "\"CanClientsChangeConfigs\" set to " + ::MultiJump.Configs["CanClientsChangeConfigs"] + ".");
+                        ClientPrint(null, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "CanClientsChangeConfigs set to " + ::MultiJump.Configs["CanClientsChangeConfigs"] + ".");
                         break;
                     case "mj_client_toggle":
                         if (command.len() > 1)
@@ -861,7 +953,7 @@ if ("MultiJump" in this)
                                         candosave = true;
                                 }
                             }
-                            ClientPrint(client, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "Jump for " + ::MultiJump.GetPlayerName(target) + " is " + !::MultiJump.Clients[target_steamid]["DisabledByAdmin"]);
+                            ClientPrint(null, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "Jump for " + ::MultiJump.GetPlayerName(target) + " is " + !::MultiJump.Clients[target_steamid]["DisabledByAdmin"]);
                         }
                         break;
                     case "mj_add_temporal_client":
@@ -905,7 +997,8 @@ if ("MultiJump" in this)
                             if (!::MultiJump.RemoveFromUsersTable(value))
                                 return;
 
-                            delete ::MultiJump.Clients[value];
+                            if (value in ::MultiJump.Clients)
+                                delete ::MultiJump.Clients[value];
                             ClientPrint(client, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + value + " was removed from the 'Users' table.");
                         }
                         break;
@@ -915,11 +1008,40 @@ if ("MultiJump" in this)
                         else
                             ::MultiJump.Configs["DebugJumps"] = true;
 
-                        ClientPrint(client, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "Debug is " + (::MultiJump.Configs["DebugJumps"] ? "enabled" : "disabled") + ".");
+                        ClientPrint(null, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "Debug is " + (::MultiJump.Configs["DebugJumps"] ? "enabled" : "disabled") + ".");
                         break;
                     case "mj_reload_configs":
                         ::MultiJump.ManageConfigs();
                         ClientPrint(client, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "Configs file reloaded.");
+                        break;
+                    case "mj_print_configs":
+                        ClientPrint(client, 3, "\x04" + "[MultiJump Vscript]" + "\x07990000" + "[ADMIN] " + "\x07E0E0E0" + "See the console...");
+                        ClientPrint(client, 2, "========== CURRENT CONFIGS ==========");
+                        foreach (key, val in ::MultiJump.Configs)
+                        {   // You can't print a big string in client channels
+                            if (typeof val != "table")
+                                ClientPrint(client, 2, "\t" + key + " = " + val);
+                            else 
+                            {
+                                ClientPrint(client, 2, "\t" + key + " = ");
+                                ClientPrint(client, 2, "\t{");
+                                foreach (key1, value in val)
+                                {
+                                    if (typeof value != "table")
+                                        ClientPrint(client, 2, "\t\t" + key1 + " = " + value);
+                                    else 
+                                    {
+                                        ClientPrint(client, 2, "\t\t" + key1 + " = ");
+                                        ClientPrint(client, 2, "\t\t{");
+                                        foreach (key2, value2 in value)
+                                            ClientPrint(client, 2, "\t\t\t" + key2 + " = " + value2);
+                                        ClientPrint(client, 2, "\t\t}");
+                                    }               
+                                }
+                                ClientPrint(client, 2, "\t}");    
+                            }
+                        }
+                        ClientPrint(client, 2, "========== CURRENT CONFIGS ==========");
                         break;
                     }
             }
@@ -977,10 +1099,12 @@ if ("MultiJump" in this)
 
         local steamid = ::MultiJump.GetSteamID(victim);
         local userid = ::MultiJump.GetPlayerUserID(victim);
-        if (damage_type == 32 && steamid in ::MultiJump.Clients && !::MultiJump.Clients[steamid]["FallDamage"])
+
+        if (damage_type == 32 && steamid in ::MultiJump.Clients && !::MultiJump.Clients[steamid]["FallDamage"] && !::MultiJump.Clients[steamid]["DisabledByAdmin"])
             params.damage = 0;
     }
 }
 __CollectGameEventCallbacks(::MultiJump);
+::MultiJump.Init();
 if (clienttable != null)
     ::MultiJump.Clients = clienttable;

@@ -95,7 +95,7 @@ The config file should look like this (The comment lines aren't included):
   ThinkInterval = -1
 } 
 ```
-NOTE: You can copy this code and paste it to your own config file but make sure to remove the commented lines to avoid reaching the read limit (16384 bytes)
+### NOTE: You can copy the code and paste it on your own config file but make sure to remove the commented lines to avoid reaching the read size limit (16384 bytes)
 
 ## In-game chat commands
 You can customize the addon without opening the config file (unless it's a replicated config such as "JumpForce").

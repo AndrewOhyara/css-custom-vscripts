@@ -43,7 +43,7 @@ The config file should look like this (The comment lines aren't included):
 
   // If AutoAddClients and TF2mode is true:
   // Set the fixed side force when jumping and pressing any WASD buttons on air for new clients.
-  TF2sideForce = 265
+  TF2sideForce = 260
 
   // If AutoAddClients is true: 
   // Enable/Disable the stopping of the player air speed if they're not pressing any WASD buttons for new clients.
@@ -79,7 +79,7 @@ The config file should look like this (The comment lines aren't included):
 
   // The interval of the announcement message in the server.
   // Use 0 to disable
-  AnnouncementInterval = 150
+  AnnouncementInterval = 180
 
   // Enable/Disable the debug mode for the server.
   // The debug mode should look like this: https://youtu.be/LxKWcJm65j0
@@ -113,14 +113,14 @@ Some commands require parameters. Example: !mj_jumplimit 100 | !mj_remove_saved_
 
 - ### Host commands
   - !mj_print_clients - Print the configs of all clients in the console.
-  - !mj_script_toggle - Enable/Disable the script for the server.
+  - !mj_script_toggle - Enable/Disable the script in the server.
   - !mj_autoadd_clients - Enable/Disable the auto add of new connected clients to the temporal client table.
   - !mj_client_can_config - Enable/Disable the ability of the clients to modify their own configs.
-  - !mj_client_toggle |userid| <save_changes: true | false> - Enable or disable the jump ability of a connected client.
+  - !mj_client_toggle |userid| <save_changes: true | false> - Enable/Disable the jump ability of a connected client.
   - !mj_add_temporal_client |userid| - Adds a client in the temporal client table. It's not stored in the Users table.
   - !mj_save_client |userid| - Saves a connected client in the config file.
   - !mj_remove_saved_client |steamid3| - Removes a client by the steamid3 from the Users table.
-  - !mj_debug - Enable/Disable the debug mode for the server.
+  - !mj_debug - Enable/Disable the debug mode in the server.
   - !mj_reload_configs - Reloads the config file.
   
 

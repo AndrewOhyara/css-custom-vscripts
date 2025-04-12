@@ -584,7 +584,7 @@ if ("MultiJump" in this)
                 velocity_final = RotateOrientation(angles, QAngle(0, 45, 0)).Forward();
                 velocity_final["x"] *= front_velocity;
                 velocity_final["y"] *= front_velocity;
-                ::MultiJump.DebugPrint(client, "tf2jump_forward_left", vector_forward);
+                ::MultiJump.DebugPrint(client, "tf2jump_forward_left", velocity_final);
                 overriden = true;
             }
             else if (wasd_table["d"] > 0 && wasd_table["a"] == 0)
@@ -592,7 +592,7 @@ if ("MultiJump" in this)
                 velocity_final = RotateOrientation(angles, QAngle(0, -45, 0)).Forward();
                 velocity_final["x"] *= front_velocity;
                 velocity_final["y"] *= front_velocity;
-                ::MultiJump.DebugPrint(client, "tf2jump_forward_right", vector_forward);
+                ::MultiJump.DebugPrint(client, "tf2jump_forward_right", velocity_final);
                 overriden = true;
             }
             velocity_final["z"] = jump_height;
@@ -609,7 +609,7 @@ if ("MultiJump" in this)
                 velocity_final = RotateOrientation(angles, QAngle(0, 135, 0)).Forward();
                 velocity_final["x"] *= front_velocity;
                 velocity_final["y"] *= front_velocity;
-                ::MultiJump.DebugPrint(client, "tf2jump_backward_left", vector_forward);
+                ::MultiJump.DebugPrint(client, "tf2jump_backward_left", velocity_final);
                 overriden = true;
             }
             else if (wasd_table["d"] > 0 && wasd_table["a"] == 0)
@@ -617,7 +617,7 @@ if ("MultiJump" in this)
                 velocity_final = RotateOrientation(angles, QAngle(0, -135, 0)).Forward();
                 velocity_final["x"] *= front_velocity;
                 velocity_final["y"] *= front_velocity;
-                ::MultiJump.DebugPrint(client, "tf2jump_backward_right", vector_forward);
+                ::MultiJump.DebugPrint(client, "tf2jump_backward_right", velocity_final);
                 overriden = true;
             }
             velocity_final["z"] = jump_height;
@@ -719,6 +719,7 @@ if ("MultiJump" in this)
                             ClientPrint(client, 3, "\x04" + "[MultiJump Vscript] " + "\x07E0E0E0" + "See the console...");
                             ClientPrint(client, 2, "====== CLIENT COMMANDS ======");
                             ClientPrint(client, 2, "!mj_configs - Print your configs in console.");
+                            ClientPrint(client, 2, "!mj_reset - Resets your configs.");
                             ClientPrint(client, 2, "!mj_multijump - Enable/Disable the multijump for yourself.");
                             ClientPrint(client, 2, "!mj_tf2mode - Enable/Disable TF2 Scout jump mode.");
                             ClientPrint(client, 2, "!mj_falldamage - Enable/Disable the falldamage for yourself.");
@@ -842,6 +843,25 @@ if ("MultiJump" in this)
                                 ClientPrint(client, 3, "\x04" + "[MultiJump Vscript] " + "\x07E0E0E0" + "\"TF2sideForce\" set to " + value);
                             }
                             break;
+                        case "mj_reset":
+                            ::MultiJump.Clients[steamid].JumpLimit = ::MultiJump.Configs["JumpLimit"];
+                            ::MultiJump.Clients[steamid].JumpForce = ::MultiJump.Configs["JumpForce"];
+                            ::MultiJump.Clients[steamid].TF2mode = ::MultiJump.Configs["TF2mode"];
+                            ::MultiJump.Clients[steamid].TF2sideForce = ::MultiJump.Configs["TF2sideForce"];
+                            ::MultiJump.Clients[steamid].DoAirStop = ::MultiJump.Configs["DoAirStop"];
+                            ::MultiJump.Clients[steamid].FallDamage = ::MultiJump.Configs["FallDamage"];
+                            if (steamid in ::MultiJump.Configs.Users)
+                            {
+                                ::MultiJump.Configs.Users[steamid].JumpLimit = ::MultiJump.Configs["JumpLimit"];
+                                ::MultiJump.Configs.Users[steamid].JumpForce = ::MultiJump.Configs["JumpForce"];
+                                ::MultiJump.Configs.Users[steamid].TF2mode = ::MultiJump.Configs["TF2mode"];
+                                ::MultiJump.Configs.Users[steamid].TF2sideForce = ::MultiJump.Configs["TF2sideForce"];
+                                ::MultiJump.Configs.Users[steamid].DoAirStop = ::MultiJump.Configs["DoAirStop"];
+                                ::MultiJump.Configs.Users[steamid].FallDamage = ::MultiJump.Configs["FallDamage"];
+                                candosave = true;
+                            }
+                            ClientPrint(client, 3, "\x04" + "[MultiJump Vscript] " + "\x07E0E0E0" + "Your configs have been reset");
+                            break;
                     }
                 }
             }
@@ -948,8 +968,8 @@ if ("MultiJump" in this)
 
                                 if (command.len() > 2)
                                 {
-                                    local value2 = command[2];
-                                    if (value2 != null && typeof value2 == "bool" && value2)
+                                    local value2 = strip(command[2].tolower());
+                                    if (value2 != null && value2.find("true") != null)
                                         candosave = true;
                                 }
                             }

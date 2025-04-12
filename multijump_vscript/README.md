@@ -116,6 +116,7 @@ Some commands require parameters. Example: !mj_jumplimit 100 | !mj_remove_saved_
   - !mj_jumpforce |number| - The force of the jump in the air.
   - !mj_tf2_sideforce |number| - The force of the side jump in air for TF2 Scout jump mode.
   - !mj_configs - Print your current configs in console.
+  - !mj_reset - Resets your configs.
 
 - ### Host commands
   - !mj_print_clients - Print the configs of all clients in the console.

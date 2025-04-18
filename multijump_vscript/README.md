@@ -6,7 +6,7 @@ This script also generates a config file which you can customize. And chat comma
 # Index
 - [Installation](#installation)
 - [Configuration file](#configuration-file)
-- [In-Game chat commands](#in-game-chat-commands)
+- [In-game chat commands](#in-game-chat-commands)
 
 ## Installation
 1. [Download the file "multijump.nut".](https://github.com/AndrewOhyara/css-custom-vscripts/blob/main/multijump_vscript/multijump.nut)

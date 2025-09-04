@@ -1,3 +1,5 @@
+::MaxPlayers <- MaxClients().tointeger();
+
 if ("WAAachievement" in this)
     WAAachievement.clear();
 
@@ -5,39 +7,37 @@ if ("WAAachievement" in this)
 {
     bEnabled = true
     OppositeHostTeam = -1
-    // READ: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions#INextBotComponent:~:text=Calling-,RunScriptCode
-    ClearStringFromPool =  function(string)
-    {
-        local dummy = Entities.CreateByClassname("info_target");
-        dummy.KeyValueFromString("targetname", string);
-        NetProps.SetPropBool(dummy, "m_bForcePurgeFixedupStrings", true);
-        dummy.Destroy();
-    }
-    // READ: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions#INextBotComponent:~:text=Calling-,RunScriptCode
-    EntFireCodeSafe =  function(entity, code, delay = 0.0, activator = null, caller = null)
-    {
-        EntFireByHandle(entity, "RunScriptCode", code, delay, activator, caller);
-        ::WAAachievement.ClearStringFromPool(code);
-    }
+    RunWithDelay = function(func, delay = 0.0)
+	{
+		local worldspawn = Entities.First();	
+		worldspawn.ValidateScriptScope();
+		local worldspawn_scope = worldspawn.GetScriptScope();
+		local func_name = UniqueString();
+		worldspawn_scope[func_name] <- function[this]()
+		{
+			delete worldspawn_scope[func_name];
+			func();
+		}
+		EntFireByHandle(worldspawn, "CallScriptFunction", func_name, delay, null, null);
+		return func_name;
+	}
 
     SlayTeam = function(team = -1, bIgnoreHumanClients = false)   // UNASSIGNED = 0 | SPEC = 1 | TT = 2 | CT = 3
-    {   // For a faster call , you may want to use GetPlayers() from custom_functions/player.nut.
-        for (local client; client = Entities.FindByClassname(client, "player");)
+    {
+        for (local i = 1; i <= MaxPlayers; i++)
         {
-            if ((client != null && client.IsValid()) && client.GetTeam() == team)
-            {
-                if (bIgnoreHumanClients && !IsPlayerABot(client))
-                    continue;
+            local client = PlayerInstanceFromIndex(i);
+            if (!client || client.GetTeam() != team || (bIgnoreHumanClients && !IsPlayerABot(client)))
+                continue;
 
-                client.TakeDamage(client.GetMaxHealth() * client.GetMaxHealth(), 0, Entities.First());  // DMG_GENERIC
-            }
+            client.TakeDamage(client.GetHealth() * client.GetHealth(), 0, Entities.First());    // DMG_GENERIC
         }
     }
 
     SlayHostTeam = function()
     {
         local host = PlayerInstanceFromIndex(1); // Safe GetListenServerHost()
-        if (host != null && host.IsValid() && host.IsPlayer())
+        if (host != null && host.IsValid())
         {
             local host_team = host.GetTeam();
             ClientPrint(null, 3, "\x07FF3F3F" + "KILLING YOUR TEAM...");
@@ -60,13 +60,13 @@ if ("WAAachievement" in this)
         if (!WAAachievement.bEnabled)
             return;
             
-        EntFireCodeSafe(Entities.First(), "WAAachievement.SlayHostTeam()", 0.2, null, null);
-        EntFireCodeSafe(Entities.First(), "ClientPrint(null, 3,  \"\x07FFFFFF\" + \"KILLING YOUR ENEMIES IN... 4\")", 1, null, null);
-        EntFireCodeSafe(Entities.First(), "ClientPrint(null, 3,  \"\x07FFFFFF\" + \"KILLING YOUR ENEMIES IN... 3\")", 2, null, null);
-        EntFireCodeSafe(Entities.First(), "ClientPrint(null, 3,  \"\x07FFFFFF\" + \"KILLING YOUR ENEMIES IN... 2\")", 3, null, null);
-        EntFireCodeSafe(Entities.First(), "ClientPrint(null, 3,  \"\x07FFFFFF\" + \"KILLING YOUR ENEMIES IN... 1\")", 4, null, null);
-        EntFireCodeSafe(Entities.First(), "ClientPrint(null, 3,  \"\x07FF3F3F\" + \"PERISH!\")", 5, null, null);
-        EntFireCodeSafe(Entities.First(), "WAAachievement.SlayOppositeHostTeam()", 5, null, null);
+        RunWithDelay(@() WAAachievement.SlayHostTeam(), 0.2);
+        RunWithDelay(@() ClientPrint(null, 3,  "\x07FFFFFF" + "KILLING YOUR ENEMIES IN... 4"), 1);
+        RunWithDelay(@() ClientPrint(null, 3,  "\x07FFFFFF" + "KILLING YOUR ENEMIES IN... 3"), 2);
+        RunWithDelay(@() ClientPrint(null, 3,  "\x07FFFFFF" + "KILLING YOUR ENEMIES IN... 2"), 3);
+        RunWithDelay(@() ClientPrint(null, 3,  "\x07FFFFFF" + "KILLING YOUR ENEMIES IN... 1"), 4);
+        RunWithDelay(@() ClientPrint(null, 3,  "\x07FF3F3F" + "PERISH!"), 5);
+        RunWithDelay(@() WAAachievement.SlayOppositeHostTeam(), 5);
     }
 }
 __CollectGameEventCallbacks(WAAachievement);

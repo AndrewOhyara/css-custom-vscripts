@@ -2,21 +2,20 @@ if ("DissolveCorpse" in this)
     ::DissolveCorpse.clear();
 
 ::DissolveCorpse <- {
-    // READ: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions#INextBotComponent:~:text=Calling-,RunScriptCode
-    ClearStringFromPool = function(string)
-    {
-        local dummy = Entities.CreateByClassname("info_target");
-        dummy.KeyValueFromString("targetname", string);
-        NetProps.SetPropBool(dummy, "m_bForcePurgeFixedupStrings", true);
-        dummy.Destroy();
-    }
-
-    // READ: https://developer.valvesoftware.com/wiki/Team_Fortress_2/Scripting/Script_Functions#INextBotComponent:~:text=Calling-,RunScriptCode
-    EntFireCodeSafe = function(entity, code, delay = 0.0, activator = null, caller = null)
-    {
-        EntFireByHandle(entity, "RunScriptCode", code, delay, activator, caller);
-        ::DissolveCorpse.ClearStringFromPool(code);
-    }
+    RunWithDelay = function(func, delay = 0.0)
+	{
+		local worldspawn = Entities.First();	
+		worldspawn.ValidateScriptScope();
+		local worldspawn_scope = worldspawn.GetScriptScope();
+		local func_name = UniqueString();
+		worldspawn_scope[func_name] <- function[this]()
+		{
+			delete worldspawn_scope[func_name];
+			func();
+		}
+		EntFireByHandle(worldspawn, "CallScriptFunction", func_name, delay, null, null);
+		return func_name;
+	}
 
     DissolveEntity = function(any, type = 0)
     {
@@ -33,6 +32,8 @@ if ("DissolveCorpse" in this)
         NetProps.SetPropBool(dissolver, "m_bForcePurgeFixedupStrings", true);
         dissolver.KeyValueFromString("target", "!activator");
         dissolver.KeyValueFromInt("dissolvetype", type);
+        dissolver.DispatchSpawn();
+
         dissolver.AcceptInput("Dissolve", "", ent, null);
         dissolver.Kill();
     }
@@ -45,7 +46,7 @@ if ("DissolveCorpse" in this)
 
         local ragdoll = NetProps.GetPropEntity(client, "m_hRagdoll");
         if (ragdoll != null && ragdoll.IsValid())
-            EntFireCodeSafe(Entities.First(), "DissolveCorpse.DissolveEntity("+ragdoll.entindex()+",0)", 1, null, null);
+            RunWithDelay(@() DissolveCorpse.DissolveEntity(ragdoll.entindex(), 0), 1.0);
     }
 }
 __CollectGameEventCallbacks(DissolveCorpse);
@@ -81,17 +82,16 @@ if("BulletTracers" in this)
                 texture = "sprites/laserbeam.spr"
                 spawnflags = 1
             })
+            // when entity is created new string are placed into game string table which has a limit, if it is exceeded, the game crashes
+            // in our case, where we create an entity, every time the bullet_impact event is fired, this table is filled with new strings
+            // m_bForcePurgeFixedupStrings netprop will help you avoid this
+            NetProps.SetPropBool(targetStart, "m_bForcePurgeFixedupStrings", true)
+            NetProps.SetPropBool(targetEnd, "m_bForcePurgeFixedupStrings", true)
+            NetProps.SetPropBool(beam, "m_bForcePurgeFixedupStrings", true)
 
-	        // when entity is created new string are placed into game string table which has a limit, if it is exceeded, the game crashes
-		// in our case, where we create an entity, every time the bullet_impact event is fired, this table is filled with new strings
-		// m_bForcePurgeFixedupStrings netprop will help you avoid this
-		NetProps.SetPropBool(targetStart, "m_bForcePurgeFixedupStrings", true)
-		NetProps.SetPropBool(targetEnd, "m_bForcePurgeFixedupStrings", true)
-		NetProps.SetPropBool(beam, "m_bForcePurgeFixedupStrings", true)
-	
-	        EntFireByHandle(beam, "Kill", "", 0, null, null)
-	        EntFireByHandle(targetStart, "Kill", "", 0.01, null, null)
-	        EntFireByHandle(targetEnd, "Kill", "", 0.01, null, null)
+            EntFireByHandle(beam, "Kill", "", 0, null, null)
+            EntFireByHandle(targetStart, "Kill", "", 0.01, null, null)
+            EntFireByHandle(targetEnd, "Kill", "", 0.01, null, null)
         }
     }
 }

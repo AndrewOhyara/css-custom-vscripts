@@ -8,7 +8,8 @@ To run any of those files, you can use script_execute <name_of_the_file> (in-gam
 IncludeScript("name_of_the_file", getrootable());
 
 // Including it in a specific scope (ex. a table or an entity scope)
-// Your scope must exists before including any script file
+// The scope must exists before including any script file.
+// The scope parameter can be null if you don't want to define a scope.
 IncludeScript("name_of_the_file", your_scope)
 
 // EXAMPLE
@@ -16,5 +17,6 @@ IncludeScript("name_of_the_file", your_scope)
 IncludeScript("gift_grab_achievement", getroottable());
 ```
 # NOTES
+- You can install the scripts in the 'custom' folder if they are wihtin this path: custom/<my_mod_folder>/scripts/vscripts
 - Most of these files are independent and don't require anything. Not even "cs_custom_functions.nut".
 - You may need notepad++ to open ".nut" files.

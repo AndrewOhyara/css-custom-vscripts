@@ -41,13 +41,15 @@ if ("DissolveCorpse" in this)
     OnGameEvent_player_death = function(params)
     {
         local client = GetPlayerFromUserID(params["userid"]);
-        if (!client)
+        if (!client || !client.IsValid())
             return;
 
         local ragdoll = NetProps.GetPropEntity(client, "m_hRagdoll");
-		local index = ragdoll.entindex();
         if (ragdoll != null && ragdoll.IsValid())
+        {
+            local index = ragdoll.entindex();
             RunWithDelay(@() DissolveCorpse.DissolveEntity(index, 0), 1.0);
+        }
     }
 }
 __CollectGameEventCallbacks(DissolveCorpse);
@@ -97,4 +99,5 @@ if("BulletTracers" in this)
     }
 }
 __CollectGameEventCallbacks(::BulletTracers);
+
 

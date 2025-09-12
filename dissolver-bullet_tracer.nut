@@ -25,7 +25,7 @@ if ("DissolveCorpse" in this)
         else if (typeof ent != "instance")
             return;
 
-        if (ent == Entities.First())
+        if (!ent || !ent.IsValid() || ent == Entities.First())
             return;
 
         local dissolver = Entities.CreateByClassname("env_entity_dissolver");
@@ -45,8 +45,9 @@ if ("DissolveCorpse" in this)
             return;
 
         local ragdoll = NetProps.GetPropEntity(client, "m_hRagdoll");
+		local index = ragdoll.entindex();
         if (ragdoll != null && ragdoll.IsValid())
-            RunWithDelay(@() DissolveCorpse.DissolveEntity(ragdoll.entindex(), 0), 1.0);
+            RunWithDelay(@() DissolveCorpse.DissolveEntity(index, 0), 1.0);
     }
 }
 __CollectGameEventCallbacks(DissolveCorpse);
@@ -96,3 +97,4 @@ if("BulletTracers" in this)
     }
 }
 __CollectGameEventCallbacks(::BulletTracers);
+

@@ -1,4 +1,4 @@
-### NOTHING HERE BELONGS TO ME. MOST OF THESE FILES ARE HELPERS, EXAMPLES AND EXPERIMENTS TO TAKE AS A REFERENCE
+### NOTHING HERE BELONGS TO ME (EXCEPT VSCRIPT_LOADER). MOST OF THESE FILES ARE HELPERS, EXAMPLES AND EXPERIMENTS TO TAKE AS A REFERENCE
 
 To run any of those files, you can use script_execute <name_of_the_file> (in-game commmand) OR include them in your mapspawn.nut to run them automatically per map load.
 ### The "mapspawn.nut" file must be created on the cstrike/script/vscripts folder (Create the "vscripts" folder if there's no folder).

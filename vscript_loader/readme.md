@@ -3,6 +3,8 @@ A simple loader for vscript files for those game which doesn't have the l4d2's a
 
 Runs at map spawn and between round. Loads a list of vscripts with error handling. Includes a table for scoped scripts.
 
+Supported games: TF2, CSS, DODS, HL2DM
+
 # Index
 - [Installation](#installation)
 - [Files](#files)

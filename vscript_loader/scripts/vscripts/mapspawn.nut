@@ -20,6 +20,7 @@ if (!("VscriptLoader" in getroottable()))
         ShouldLoadFiles = false
         FileLoadFinished = false
         EntityToListen = null
+        RoundStartCount = 0
 
         function IsCheatingSession()
         {
@@ -83,10 +84,13 @@ if (!("VscriptLoader" in getroottable()))
             )
         }
 
-        function ConstructEntity()
+        function ConstructEntity(eventname = "")
         {
             if (EntityToListen != null && EntityToListen.IsValid())
                 return;
+
+            if (IsCheatingSession())
+                printl("[VSCRIPT LOADER][DEBUG] Constructing EntityToListen in event " + eventname);
 
             EntityToListen = Entities.CreateByClassname("logic_timer");
             EntityToListen.KeyValueFromString("targetname", UniqueString("dummy_logictimer_"));
@@ -102,7 +106,7 @@ if (!("VscriptLoader" in getroottable()))
                 if (!world || !world.IsValid())
                 {
                     if (::VscriptLoader.IsCheatingSession())
-                        printl("[VSCRIPT LOADER] Server shutdown or changelevel detected. Not reloading scripts\n\t" +
+                        printl("[VSCRIPT LOADER][DEBUG] Server shutdown or changelevel detected. Not reloading scripts\n\t" +
                                 "worldspawn handle: " + world + " | mapname: " + GetMapName() + " | time: " + Time() + " | frame: " + GetFrameCount());
 
                     return;
@@ -114,14 +118,50 @@ if (!("VscriptLoader" in getroottable()))
                     ::VscriptLoader.LoadRoundOnlyFiles();
                 }
                 if (::VscriptLoader.IsCheatingSession())
-                    printl("[VSCRIPT LOADER] EntityToListen HAS BEEN REMOVED, HOPE THIS WORKS BEFORE ROUND_START");
+                    printl("[VSCRIPT LOADER][DEBUG] EntityToListen HAS BEEN REMOVED, HOPE THIS WORKS BEFORE STARTING A NEW ROUND");
             })
         }
 
         function OnGameEvent_round_start(params)
         {
-            ConstructEntity();
+            ConstructEntity("round_start");
+            RoundStartCount++;
         }
+
+        function OnGameEvent_dod_round_start(params)
+        {   // Day of Defeat Source round_start support!
+            ConstructEntity("dod_round_start");
+            RoundStartCount++;
+        }
+
+        // TF2 SUPPORT
+        function OnGameEvent_teamplay_round_start(params)
+        {	// Team Fortress 2 round_start support!
+            ConstructEntity("teamplay_round_start");
+            RoundStartCount++;
+        }
+
+        function OnGameEvent_scorestats_accumulated_update(params)
+        {   // CLEANUP EVENT
+            if (EntityToListen != null && EntityToListen.IsValid())
+            {
+                printl("[VSCRIPT LOADER][DEBUG] Killing EntityToListen in scorestats_accumulated_update");
+                EntityToListen.Kill();
+            }
+        }
+
+        function OnGameEvent_recalculate_holidays(params)
+        {   // CLEANUP EVENT FOR MVM?
+            if ("GetRoundState" in getroottable() && typeof GetRoundState == "native function" && GetRoundState() == 3)
+            {
+                if (EntityToListen != null && EntityToListen.IsValid())
+                {
+                    printl("[VSCRIPT LOADER][DEBUG] Killing EntityToListen in recalculate_holidays");
+                    EntityToListen.Kill();
+                }
+            }
+        }
+        // TF2 SUPPORT
 
         function AddScript(script_data)
         {
@@ -185,6 +225,9 @@ if (!("VscriptLoader" in getroottable()))
             if (Calls < 1)
             {
                 //Calls++;
+                if (IsCheatingSession())
+                    printl("[VSCRIPT LOADER][DEBUG] Attempt to call LoadRoundOnlyFiles() failed.")
+
                 return;
             }
 
@@ -260,7 +303,7 @@ if (!("VscriptLoader" in getroottable()))
             }
             ShouldLoadFiles = true;
             LoadFiles();
-            ConstructEntity();
+            ConstructEntity("::VscriptLoader.Init()");
 
             Calls++;
         }
@@ -268,3 +311,5 @@ if (!("VscriptLoader" in getroottable()))
 }
 __CollectGameEventCallbacks(::VscriptLoader);
 ::VscriptLoader.Init();
+
+

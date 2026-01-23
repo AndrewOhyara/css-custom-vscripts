@@ -10,7 +10,6 @@ MuzzleflashEvents <-
 {
 	OnGameEvent_weapon_fire = function(params)
 	{
-	//return false;
 		if (params.weapon == "knife" || params.weapon == "hegrenade" || params.weapon == "flashbang" || params.weapon == "smokegrenade" || params.weapon == "tmp")
 			return
 			
@@ -27,11 +26,11 @@ MuzzleflashEvents <-
 			return;
 
 		local host = player == GetListenServerHost();
-    		// Before creating the entity, we must make sure the player has the flashlight off.
-    		// The flashlight is a projected texture itself, so the entity will not work properly
-    		local bFlashlightOn = (NetProps.GetPropInt(player, "m_fEffects") & 4) ? true : false;
-    		if (bFlashlightOn)
-        		NetProps.SetPropInt(player, "m_fEffects", (NetProps.GetPropInt(player, "m_fEffects") & ~4)); // FIXED
+    	// Before creating the entity, we must make sure the player has the flashlight off.
+    	// The flashlight is a projected texture itself, so the entity will not work properly
+    	local bFlashlightOn = (NetProps.GetPropInt(player, "m_fEffects") & 4) ? true : false;
+    	if (bFlashlightOn)
+        	NetProps.SetPropInt(player, "m_fEffects", (NetProps.GetPropInt(player, "m_fEffects") & ~4)); // FIXED
 		
 		local light = SpawnEntityFromTable("env_projectedtexture",
 		{
@@ -47,8 +46,9 @@ MuzzleflashEvents <-
 		// Uncomment the next line if you imported the L4D2 muzzeflash texture
 		//light.AcceptInput("SpotlightTexture", "effects/muzzleflash_light", null, null);
 
-		EntFireByHandle(light, "Kill", "", 0.0015, null, null);
+		EntFireByHandle(light, "Kill", "", 0.01, null, null);
 		// I won't bother in turning on the flashlight again.
 	}
 } 
 __CollectGameEventCallbacks(MuzzleflashEvents);
+

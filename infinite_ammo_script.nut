@@ -1,5 +1,5 @@
 // Infinite ammo script example.
-// You can modify the logic to filter which players and weapons can be set with inifinite ammo.
+// You can modify the logic to filter which players and weapons can be set with infinite ammo.
 if ("InfinteAmmoScript" in this)
     InfinteAmmoScript.clear();
 
@@ -34,4 +34,5 @@ if ("InfinteAmmoScript" in this)
         }
     }
 };
+
 __CollectGameEventCallbacks(InfinteAmmoScript);
